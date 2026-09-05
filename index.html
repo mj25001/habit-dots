@@ -970,6 +970,15 @@ body{
   }
 }
 
+/* ファイル選択欄。display:none にすると端末によっては開かないので、画面外に置く */
+.offscreen{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+
 [hidden]{ display:none !important; }
 </style>
 </head>
@@ -1056,9 +1065,14 @@ body{
 
     <section class="backup-block">
       <h3>読み込み</h3>
-      <p class="hint">JSON を貼り付けて「読み込む」を押すと、全データが置き換わります。</p>
+      <p class="hint">JSON のファイルを選ぶか、貼り付けて「読み込む」を押すと、全データが置き換わります。</p>
       <textarea id="import-text" rows="8" placeholder="ここに JSON を貼り付け"></textarea>
-      <button type="button" class="wide-button" id="import-run">読み込む</button>
+      <div class="button-row">
+        <button type="button" class="wide-button" id="import-run">読み込む</button>
+        <button type="button" class="wide-button" id="import-file-run">ファイルから読み込む</button>
+      </div>
+      <input type="file" id="import-file" class="offscreen"
+             accept="application/json,.json" aria-hidden="true" tabindex="-1">
       <p id="import-message" hidden></p>
     </section>
   </section>
@@ -2204,6 +2218,29 @@ document.getElementById('open-settings').addEventListener('click', openSettings)
 document.getElementById('close-settings').addEventListener('click', closeSettings);
 document.getElementById('import-run').addEventListener('click', runImport);
 
+/* ファイルから読み込む。
+   読んだ中身は貼り付け欄に入れて、貼り付けたときとまったく同じ処理を通す。 */
+document.getElementById('import-file-run').addEventListener('click', function(){
+  document.getElementById('import-file').click();
+});
+
+document.getElementById('import-file').addEventListener('change', function(event){
+  const input = event.target;
+  const file = input.files && input.files.length > 0 ? input.files[0] : null;
+  input.value = '';   /* 同じファイルをもう一度選べるようにする */
+  if (file === null) return;
+
+  const reader = new FileReader();
+  reader.onload = function(){
+    document.getElementById('import-text').value = String(reader.result);
+    runImport();
+  };
+  reader.onerror = function(){
+    showImportMessage('ファイルを読めませんでした', false);
+  };
+  reader.readAsText(file);
+});
+
 /* --- 8節 共有と、バックアップを促す帯 --- */
 
 const REMIND_AFTER_DAYS = 30;
@@ -2259,20 +2296,55 @@ function fillExportBox(){
   text.select();
 }
 
-/* 共有シートを開く。開けたら true。
-   使えない環境とキャンセルは false を返し、呼び出し側で何もしない。 */
-async function shareBackup(){
-  if (typeof navigator.share !== 'function') return false;
-  try {
-    await navigator.share({ text: backupJson() });
-    return true;
-  } catch (e) {
-    return false;
-  }
+function backupFileName(){
+  return 'habit-backup-' + dateKey(today()) + '.json';
 }
 
-function shareIsAvailable(){
-  return typeof navigator.share === 'function';
+/* 共有シートを開く。'shared' / 'cancelled' / 'unavailable' を返す。
+
+   ファイルとして共有できるならそちらを優先する。
+   44KB のテキストを navigator.share({ text }) で渡すと、
+   iOS のメモが受け取れずに即座に閉じてしまうため。 */
+async function shareBackup(){
+  const json = backupJson();
+
+  if (typeof navigator.canShare === 'function' && typeof File === 'function') {
+    let file = null;
+    try {
+      file = new File([json], backupFileName(), { type: 'application/json' });
+    } catch (e) {
+      file = null;
+    }
+
+    let canShareFile = false;
+    try {
+      canShareFile = file !== null && navigator.canShare({ files: [file] });
+    } catch (e) {
+      canShareFile = false;
+    }
+
+    if (canShareFile) {
+      try {
+        await navigator.share({ files: [file] });
+        return 'shared';
+      } catch (e) {
+        if (e && e.name === 'AbortError') return 'cancelled';
+        /* ファイル共有が失敗したときは、テキストで試す */
+      }
+    }
+  }
+
+  /* ファイル共有が使えなければ、これまでどおりテキストで共有 */
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ text: json });
+      return 'shared';
+    } catch (e) {
+      return (e && e.name === 'AbortError') ? 'cancelled' : 'unavailable';
+    }
+  }
+
+  return 'unavailable';
 }
 
 /* 帯を出すか決める。
@@ -2308,7 +2380,8 @@ document.getElementById('export-run').addEventListener('click', function(){
 });
 
 document.getElementById('share-run').addEventListener('click', async function(){
-  if (await shareBackup()) {
+  const result = await shareBackup();
+  if (result === 'shared') {
     markExported();
     showExportMessage('共有しました。');
     return;
@@ -2317,7 +2390,7 @@ document.getElementById('share-run').addEventListener('click', async function(){
   /* 使えない環境では何も壊さず、テキスト欄からのコピーに任せる */
   fillExportBox();
   showExportMessage(
-    shareIsAvailable()
+    result === 'cancelled'
       ? '共有を取り消しました。上のテキストをコピーしても保管できます。'
       : 'この端末では共有を使えません。上のテキストをコピーして保管してください。'
   );
@@ -2325,7 +2398,8 @@ document.getElementById('share-run').addEventListener('click', async function(){
 
 /* 帯を押すと共有シートが開く */
 document.getElementById('backup-notice-share').addEventListener('click', async function(){
-  if (await shareBackup()) {
+  const result = await shareBackup();
+  if (result === 'shared') {
     markExported();
     return;
   }
@@ -2333,7 +2407,7 @@ document.getElementById('backup-notice-share').addEventListener('click', async f
   openSettings();
   fillExportBox();
   showExportMessage(
-    shareIsAvailable()
+    result === 'cancelled'
       ? '共有を取り消しました。上のテキストをコピーしても保管できます。'
       : 'この端末では共有を使えません。上のテキストをコピーして保管してください。'
   );
