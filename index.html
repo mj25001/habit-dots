@@ -21,6 +21,13 @@
 
 *{ box-sizing:border-box; }
 
+/* ピンチ拡大とダブルタップ拡大を止める。縦スクロールは残す。
+   viewport の user-scalable=no は今の iOS Safari では無視されるので、こちらで止める。 */
+html,
+body{
+  touch-action:pan-y;
+}
+
 html{ background:var(--bg); }
 
 body{
@@ -164,7 +171,7 @@ body{
   border-radius:10px;
   padding:12px;
   font-family:inherit;
-  font-size:15px;
+  font-size:16px;   /* iOS は16px未満の入力欄で自動的に拡大する */
 }
 
 .color-row{
@@ -617,7 +624,7 @@ body{
   border-radius:10px;
   padding:12px;
   font-family:inherit;
-  font-size:15px;
+  font-size:16px;   /* iOS は16px未満の入力欄で自動的に拡大する */
   line-height:1.5;
   resize:vertical;
 }
@@ -740,7 +747,7 @@ body{
   border-radius:10px;
   padding:12px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  font-size:12px;
+  font-size:16px;   /* iOS は16px未満の入力欄で自動的に拡大する */
   line-height:1.5;
   resize:vertical;
 }
@@ -875,7 +882,7 @@ body{
   border-radius:10px;
   padding:12px;
   font-family:inherit;
-  font-size:15px;
+  font-size:16px;   /* iOS は16px未満の入力欄で自動的に拡大する */
   line-height:1.5;
   resize:vertical;
 }
@@ -2549,6 +2556,13 @@ document.getElementById('archived-list').addEventListener('click', function(even
   const name = event.target.closest('.arch-name');
   if (name !== null) openDetail(name.dataset.habitId);
 });
+
+/* touch-action の保険。WebKit 固有のピンチ操作イベントを止める。 */
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(type, function(event){
+    event.preventDefault();
+  }, { passive: false });
+}
 
 state = loadState();
 render();
