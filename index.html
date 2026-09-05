@@ -87,11 +87,22 @@ body{
 
 .card .count{
   margin-top:10px;
-  text-align:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
   font-size:15px;
   font-weight:700;
   line-height:1.2;
   font-variant-numeric:tabular-nums;
+}
+
+/* 炎アイコン。今日の記録の有無で色が変わるので絵文字は使わない。 */
+.flame{
+  flex:0 0 auto;
+  width:15px;
+  height:15px;
+  display:block;
 }
 
 .card .name{
@@ -108,7 +119,7 @@ body{
   text-align:center;
   font-size:12px;
   line-height:1.3;
-  color:var(--sub);
+  color:var(--text);
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -184,37 +195,46 @@ body{
 }
 
 /* タイムライン */
+/* 記録1件ごとを角丸のカードで囲む */
 .tl-row{
   position:relative;
-  display:flex;
-  align-items:flex-start;
-  gap:11px;
-  padding-bottom:calc(9px + var(--gap, 0px));
+  margin-bottom:14px;
 }
 
-/* 記録が無い期間は、線だけが伸びて間隔が空く。線は習慣の色。 */
-.tl-row::before{
+/* 縦線は「連続」を意味する。
+   連続した日の記録どうしの間にだけ引く。間が空いていれば引かない。 */
+.tl-row.is-linked{ margin-bottom:8px; }
+
+.tl-row.is-linked::after{
   content:'';
   position:absolute;
-  left:12px;
-  top:27px;
-  bottom:0;
+  left:27px;
+  top:100%;
+  height:8px;
   width:2px;
   background:var(--habit-color);
 }
 
-.tl-row.is-last{ padding-bottom:0; }
-.tl-row.is-last::before{ display:none; }
+.tl-row.is-last{ margin-bottom:0; }
+
+.tl-card{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  background:var(--card);
+  border-radius:12px;
+  padding:12px;
+}
 
 .tl-badge{
   flex:0 0 auto;
-  width:26px;
-  height:26px;
-  border-radius:6px;
+  width:32px;
+  height:32px;
+  border-radius:8px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:12px;
+  font-size:14px;
   font-weight:700;
   font-variant-numeric:tabular-nums;
 }
@@ -222,7 +242,7 @@ body{
 .tl-body{
   flex:1;
   min-width:0;
-  padding-top:1px;
+  padding-top:2px;
 }
 
 .tl-line{
@@ -243,7 +263,7 @@ body{
 }
 
 .tl-memo{
-  margin-top:2px;
+  margin-top:4px;
   color:var(--sub);
   font-size:13px;
   line-height:1.5;
@@ -271,21 +291,30 @@ body{
 
 #detail-more{ margin-top:4px; }
 
-/* 一覧の下の「＋」 */
+/* 「＋」は画面下部に固定する。
+   記録が214件ある習慣でも、末尾までスクロールせずに押せるように。 */
+#detail-view{
+  padding-bottom:96px;
+}
+
 #detail-add{
   appearance:none;
   -webkit-appearance:none;
-  width:100%;
-  margin-top:22px;
-  border:1px dashed rgba(255,255,255,0.25);
-  border-radius:12px;
-  padding:13px;
-  background:transparent;
-  color:var(--text);
+  position:fixed;
+  right:calc(env(safe-area-inset-right) + 18px);
+  bottom:calc(env(safe-area-inset-bottom) + 18px);
+  z-index:15;
+  width:56px;
+  height:56px;
+  border:0;
+  border-radius:50%;
+  background:var(--habit-color);
+  color:var(--habit-ink);
   font-family:inherit;
-  font-size:16px;
-  font-weight:600;
+  font-size:26px;
+  line-height:1;
   cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
 }
 
 /* --- 6節 記録の入力（日付を選んで追加・編集） --- */
@@ -848,6 +877,15 @@ const DOT_COUNT = DOT_COLS * DOT_ROWS;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/* 4節 今日まだ記録が無いときの炎の色 */
+const FLAME_OFF = '#6B7076';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const FLAME_PATH =
+  'M13.4 1.4c.2 2.8 1.5 4.2 3 5.9 1.4 1.7 2.6 3.5 2.6 5.9 0 3.9-3.1 7.4-7 7.4'
+  + 's-7-3.5-7-7.4c0-2 .8-3.7 2-5.1.1 1.4.7 2.3 1.6 2.6.6.2 1.1-.3.9-1'
+  + '-.8-3 .4-6.1 3.9-8.3Z';
+
 /* =========================================================
    日付ヘルパ
    日付は必ずローカル時刻で YYYY-MM-DD を作る。
@@ -1092,6 +1130,27 @@ function buildDots(habit, base){
   return dots;
 }
 
+/* 炎アイコン。色は fill="currentColor" 越しに差し替える */
+function buildFlame(){
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'flame');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', FLAME_PATH);
+  path.setAttribute('fill', 'currentColor');
+  svg.appendChild(path);
+
+  return svg;
+}
+
+/* 今日すでに記録があれば習慣の色、まだなら グレー */
+function paintFlame(card, habit, todayKey){
+  card.querySelector('.flame').style.color =
+    hasRecord(habit, todayKey) ? habit.color : FLAME_OFF;
+}
+
 function buildCard(habit, base){
   const card = document.createElement('div');
   card.className = 'card';
@@ -1102,7 +1161,13 @@ function buildCard(habit, base){
 
   const count = document.createElement('div');
   count.className = 'count';
-  count.textContent = '🔥 ' + totalDays(habit);
+  count.appendChild(buildFlame());
+
+  const total = document.createElement('span');
+  total.className = 'total';
+  total.textContent = totalDays(habit);
+  count.appendChild(total);
+
   card.appendChild(count);
 
   /* 習慣名をタップすると詳細画面（6節） */
@@ -1112,6 +1177,8 @@ function buildCard(habit, base){
   name.dataset.habitId = habit.id;
   name.textContent = habit.name;
   card.appendChild(name);
+
+  paintFlame(card, habit, dateKey(base));
 
   return card;
 }
@@ -1142,7 +1209,8 @@ function refreshCard(card, habit){
     dots[i].classList.toggle('is-today-open', !done && i === 0);
   }
 
-  card.querySelector('.count').textContent = '🔥 ' + totalDays(habit);
+  card.querySelector('.total').textContent = totalDays(habit);
+  paintFlame(card, habit, dateKey(base));
 }
 
 function findHabit(id){
@@ -1382,11 +1450,14 @@ function buildTimelineRow(habit, key, olderKey, isLast){
   row.className = 'tl-row';
   if (isLast) row.classList.add('is-last');
 
-  /* 記録が無い期間は、線だけが伸びて間隔が空く */
-  if (olderKey !== undefined) {
-    const gap = daysBetween(parseDate(olderKey), date) - 1;
-    if (gap > 0) row.style.setProperty('--gap', Math.min(gap, 14) * 3 + 'px');
+  /* 連続した日の記録どうしの間にだけ線を引く。
+     08/23 と 08/22 は引く。09/04 と 08/31 は引かない。 */
+  if (olderKey !== undefined && daysBetween(parseDate(olderKey), date) === 1) {
+    row.classList.add('is-linked');
   }
+
+  const inner = document.createElement('div');
+  inner.className = 'tl-card';
 
   /* 左のバッジ＝その日が連続何日目か */
   const badge = document.createElement('div');
@@ -1394,7 +1465,7 @@ function buildTimelineRow(habit, key, olderKey, isLast){
   badge.style.background = habit.color;
   badge.style.color = readableOn(habit.color);
   badge.textContent = streakEndingOn(habit, date);
-  row.appendChild(badge);
+  inner.appendChild(badge);
 
   const body = document.createElement('div');
   body.className = 'tl-body';
@@ -1422,7 +1493,7 @@ function buildTimelineRow(habit, key, olderKey, isLast){
     body.appendChild(memoText);
   }
 
-  row.appendChild(body);
+  inner.appendChild(body);
 
   /* 右端の「⋯」から、その記録の編集・削除 */
   const more = document.createElement('button');
@@ -1431,7 +1502,9 @@ function buildTimelineRow(habit, key, olderKey, isLast){
   more.dataset.date = key;
   more.setAttribute('aria-label', formatDateJa(key) + ' の記録を編集');
   more.textContent = '⋯';
-  row.appendChild(more);
+  inner.appendChild(more);
+
+  row.appendChild(inner);
 
   return row;
 }
@@ -1459,8 +1532,12 @@ function renderDetail(){
   const keys = recordKeysNewestFirst(habit);
   const shown = keys.slice(0, detailLimit);
 
+  /* つなぐ縦線と「＋」の色 */
+  const view = document.getElementById('detail-view');
+  view.style.setProperty('--habit-color', habit.color);
+  view.style.setProperty('--habit-ink', readableOn(habit.color));
+
   const list = document.getElementById('detail-list');
-  list.style.setProperty('--habit-color', habit.color);   /* つなぐ縦線の色 */
   list.textContent = '';
   shown.forEach(function(key, i){
     list.appendChild(buildTimelineRow(habit, key, shown[i + 1], i === shown.length - 1));
