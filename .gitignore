@@ -1,0 +1,8 @@
+# 個人の記録が入っているのでコミットしない（Publicリポジトリのため）
+dothabit-migration.json
+
+_to_delete/
+.DS_Store
+Thumbs.db
+desktop.ini
+node_modules/
