@@ -125,34 +125,196 @@ body{
   white-space:nowrap;
 }
 
-/* --- 空の状態 --- */
-#empty-state{
-  min-height:70vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-}
-
-#empty-state p{
-  margin:0;
+/* --- 7節 カード一覧の最後に並べる「＋」のカード（点線枠） --- */
+.add-card{
+  appearance:none;
+  -webkit-appearance:none;
+  border:1px dashed rgba(255,255,255,0.28);
+  border-radius:16px;
+  background:transparent;
   color:var(--sub);
-  font-size:14px;
+  font-family:inherit;
+  font-size:30px;
+  line-height:1;
+  min-height:120px;
+  cursor:pointer;
 }
 
-.add-button{
+/* --- 7節 習慣の入力 --- */
+.field{ margin-bottom:16px; }
+
+.field-label{
+  display:block;
+  margin-bottom:7px;
+  color:var(--sub);
+  font-size:12px;
+}
+
+.text-input{
+  display:block;
+  width:100%;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px;
+  padding:12px;
+  font-family:inherit;
+  font-size:15px;
+}
+
+.color-row{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:8px;
+}
+
+.color-swatch{
   appearance:none;
   -webkit-appearance:none;
   border:0;
-  border-radius:12px;
-  padding:12px 22px;
-  background:var(--card);
+  padding:0;
+  aspect-ratio:1 / 1;
+  border-radius:50%;
+  cursor:pointer;
+}
+
+.color-swatch.is-selected{
+  outline:2px solid var(--text);
+  outline-offset:2px;
+}
+
+/* 開始日のボタン（カレンダーを開く） */
+.date-field{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px;
+  background:var(--bg);
   color:var(--text);
   font-family:inherit;
   font-size:15px;
   font-weight:600;
+  padding:12px;
+  text-align:center;
   cursor:pointer;
+}
+
+#habit-error{
+  margin:0 0 12px;
+  color:#E5484D;
+  font-size:13px;
+}
+
+#habit-actions{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid rgba(255,255,255,0.12);
+}
+
+/* --- 7節 並び替え専用の一覧 --- */
+.reorder-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--card);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+}
+
+.reorder-name{
+  flex:1;
+  min-width:0;
+  font-size:15px;
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.reorder-step{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  border-radius:9px;
+  width:40px;
+  height:40px;
+  background:var(--bg);
+  color:var(--text);
+  font-size:17px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.reorder-step:disabled{ opacity:0.3; cursor:default; }
+
+#reorder-empty{
+  color:var(--sub);
+  font-size:13px;
+}
+
+/* --- 7節 達成済み一覧 --- */
+.arch-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--card);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+}
+
+.arch-dot{
+  flex:0 0 auto;
+  width:14px;
+  height:14px;
+  border-radius:4px;
+}
+
+.arch-body{ flex:1; min-width:0; }
+
+.arch-name{
+  appearance:none;
+  -webkit-appearance:none;
+  display:block;
+  border:0;
+  background:transparent;
+  padding:0;
+  color:var(--text);
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  text-align:left;
+  cursor:pointer;
+}
+
+.arch-meta{
+  margin-top:3px;
+  color:var(--sub);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+}
+
+.arch-restore{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  border-radius:9px;
+  padding:9px 12px;
+  background:var(--bg);
+  color:var(--text);
+  font-family:inherit;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+#archived-empty{
+  color:var(--sub);
+  font-size:13px;
 }
 
 /* --- 6節 詳細画面（履歴） --- */
@@ -538,6 +700,8 @@ body{
   cursor:pointer;
 }
 
+#open-archived{ margin-bottom:30px; }
+
 #settings-view h2{
   margin:0 0 16px;
   font-size:15px;
@@ -638,7 +802,8 @@ body{
 
 /* --- 5節 メモ入力欄 --- */
 #memo-sheet,
-#entry-sheet{
+#entry-sheet,
+#habit-sheet{
   position:fixed;
   inset:0;
   z-index:30;
@@ -746,11 +911,7 @@ body{
     <div id="home-head">
       <button type="button" class="icon-button" id="open-settings" aria-label="設定">⚙</button>
     </div>
-    <div id="habit-grid" hidden></div>
-    <div id="empty-state" hidden>
-      <p>習慣がまだありません</p>
-      <button type="button" class="add-button" id="add-habit">習慣を追加</button>
-    </div>
+    <div id="habit-grid"></div>
   </div>
 
   <!-- 6節 詳細画面（履歴） -->
@@ -773,12 +934,35 @@ body{
     <button type="button" id="detail-add">＋</button>
   </section>
 
+  <!-- 7節 並び替え専用の一覧 -->
+  <section id="reorder-view" hidden>
+    <div class="screen-head">
+      <button type="button" class="text-button" id="close-reorder">← 戻る</button>
+      <h1>並び替え</h1>
+    </div>
+    <div id="reorder-list"></div>
+    <p id="reorder-empty" hidden>稼働中の習慣がありません。</p>
+  </section>
+
+  <!-- 7節 達成済み一覧 -->
+  <section id="archived-view" hidden>
+    <div class="screen-head">
+      <button type="button" class="text-button" id="close-archived">← 戻る</button>
+      <h1>達成済み</h1>
+    </div>
+    <div id="archived-list"></div>
+    <p id="archived-empty" hidden>達成済みの習慣はありません。</p>
+  </section>
+
   <!-- 8節 設定画面 -->
   <section id="settings-view" hidden>
     <div class="screen-head">
       <button type="button" class="text-button" id="close-settings">← 戻る</button>
       <h1>設定</h1>
     </div>
+
+    <button type="button" class="wide-button" id="open-reorder">並び替え</button>
+    <button type="button" class="wide-button" id="open-archived">達成済み一覧</button>
 
     <h2>データのバックアップ</h2>
 
@@ -842,6 +1026,55 @@ body{
     <textarea id="entry-memo" rows="4" placeholder="メモ（任意）"></textarea>
     <button type="button" class="sheet-done" id="entry-save">完了</button>
     <button type="button" class="danger-button" id="entry-delete" hidden>記録を取り消す</button>
+  </div>
+</div>
+
+<!-- 7節 習慣の追加・変更・達成済み・削除 -->
+<div id="habit-sheet" hidden>
+  <div class="sheet-backdrop" data-habit-cancel></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="habit-heading">
+    <div class="sheet-head">
+      <h2 id="habit-heading"></h2>
+      <button type="button" class="sheet-close" data-habit-cancel aria-label="閉じる">×</button>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="habit-name">名前</label>
+      <input type="text" id="habit-name" class="text-input" maxlength="20" placeholder="習慣の名前">
+    </div>
+
+    <div class="field">
+      <span class="field-label">色</span>
+      <div class="color-row" id="habit-colors"></div>
+    </div>
+
+    <div class="field" id="habit-start-field">
+      <span class="field-label">開始日</span>
+      <button type="button" class="date-field" id="habit-start-button"
+              aria-expanded="false" aria-controls="habit-calendar">
+        <span id="habit-start-label"></span>
+      </button>
+      <div id="habit-calendar" hidden>
+        <div class="cal-head">
+          <button type="button" class="cal-nav" id="habit-cal-prev" aria-label="前の月">‹</button>
+          <span id="habit-cal-title"></span>
+          <button type="button" class="cal-nav" id="habit-cal-next" aria-label="次の月">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>日</span><span>月</span><span>火</span><span>水</span>
+          <span>木</span><span>金</span><span>土</span>
+        </div>
+        <div class="cal-grid" id="habit-cal-grid"></div>
+      </div>
+    </div>
+
+    <p id="habit-error" hidden></p>
+    <button type="button" class="sheet-done" id="habit-save"></button>
+
+    <div id="habit-actions" hidden>
+      <button type="button" class="wide-button" id="habit-archive"></button>
+      <button type="button" class="danger-button" id="habit-delete">この習慣を削除</button>
+    </div>
   </div>
 </div>
 
@@ -1185,15 +1418,20 @@ function buildCard(habit, base){
 
 function render(){
   const grid = document.getElementById('habit-grid');
-  const empty = document.getElementById('empty-state');
-  const habits = activeHabits();
   const base = today();
 
   grid.textContent = '';
-  for (const habit of habits) grid.appendChild(buildCard(habit, base));
+  for (const habit of activeHabits()) grid.appendChild(buildCard(habit, base));
 
-  grid.hidden = habits.length === 0;
-  empty.hidden = habits.length > 0;
+  /* カード一覧の最後に「＋」のカードを並べる。
+     習慣が0件のときは、これだけが画面に出る。 */
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'add-card';
+  add.id = 'add-habit';
+  add.setAttribute('aria-label', '習慣を追加');
+  add.textContent = '＋';
+  grid.appendChild(add);
 }
 
 /* カード1枚だけを描き直す。
@@ -1387,13 +1625,14 @@ document.addEventListener('keydown', function(event){
   if (event.key !== 'Escape') return;
   if (!document.getElementById('memo-sheet').hidden) cancelMemo();
   else if (!document.getElementById('entry-sheet').hidden) cancelEntry();
+  else if (!document.getElementById('habit-sheet').hidden) closeHabitSheet();
 });
 
 /* =========================================================
    画面の切り替え
    ========================================================= */
 
-const VIEWS = ['home-view', 'detail-view', 'settings-view'];
+const VIEWS = ['home-view', 'detail-view', 'reorder-view', 'archived-view', 'settings-view'];
 
 function showView(id){
   hideBand();
@@ -1576,28 +1815,27 @@ function isCalendarOpen(){
   return !document.getElementById('entry-calendar').hidden;
 }
 
-function renderCalendar(){
-  const habit = findHabit(entryHabitId);
-  if (habit === null || calMonth === null) return;
-
+/* 1か月ぶんを描く。記録の入力と、習慣の開始日の両方で使う。
+   paintHabit を渡すと、その習慣の記録がある日を習慣の色で塗る。 */
+function renderMonthGrid(ids, month, selectedKey, paintHabit){
   const base = today();
-  const year = calMonth.getFullYear();
-  const month = calMonth.getMonth();
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
 
-  document.getElementById('cal-title').textContent = year + '年' + (month + 1) + '月';
+  document.getElementById(ids.title).textContent = year + '年' + (monthIndex + 1) + '月';
 
-  const grid = document.getElementById('cal-grid');
+  const grid = document.getElementById(ids.grid);
   grid.textContent = '';
 
   /* 日〜土の7列に合わせるため、月初の曜日ぶんだけ空ける */
-  const leading = new Date(year, month, 1).getDay();
+  const leading = new Date(year, monthIndex, 1).getDay();
   for (let i = 0; i < leading; i++) {
     grid.appendChild(document.createElement('span'));
   }
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
+    const date = new Date(year, monthIndex, day);
     const key = dateKey(date);
 
     const cell = document.createElement('button');
@@ -1607,9 +1845,9 @@ function renderCalendar(){
     cell.textContent = day;
 
     /* その習慣の記録がある日は、習慣の色で塗る */
-    if (hasRecord(habit, key)) {
-      cell.style.background = habit.color;
-      cell.style.color = readableOn(habit.color);
+    if (paintHabit && hasRecord(paintHabit, key)) {
+      cell.style.background = paintHabit.color;
+      cell.style.color = readableOn(paintHabit.color);
     }
 
     /* 今日より先の日は選べない */
@@ -1618,14 +1856,22 @@ function renderCalendar(){
       cell.classList.add('is-future');
     }
 
-    if (key === entryDate) cell.classList.add('is-selected');
+    if (key === selectedKey) cell.classList.add('is-selected');
 
     grid.appendChild(cell);
   }
 
   /* 今月より先の月へは進めない */
-  document.getElementById('cal-next').disabled =
-    (year === base.getFullYear() && month === base.getMonth());
+  document.getElementById(ids.next).disabled =
+    (year === base.getFullYear() && monthIndex === base.getMonth());
+}
+
+const ENTRY_CAL = { title: 'cal-title', grid: 'cal-grid', next: 'cal-next' };
+
+function renderCalendar(){
+  const habit = findHabit(entryHabitId);
+  if (habit === null || calMonth === null) return;
+  renderMonthGrid(ENTRY_CAL, calMonth, entryDate, habit);
 }
 
 function openCalendar(){
@@ -1759,9 +2005,8 @@ document.getElementById('detail-list').addEventListener('click', function(event)
   openEntry(detailHabitId, more.dataset.date);
 });
 
-/* 習慣ごとの設定は 7節。実装の順番では 6 番目 */
 document.getElementById('detail-settings').addEventListener('click', function(){
-  window.alert('習慣の設定はこれから実装します');
+  openHabitSheet('edit', detailHabitId);
 });
 
 document.getElementById('entry-prev').addEventListener('click', function(){ shiftEntryDate(-1); });
@@ -1860,9 +2105,420 @@ document.getElementById('export-select').addEventListener('click', function(){
   text.select();
 });
 
-/* 習慣の追加は 7節。実装の順番では 4 番目 */
-document.getElementById('add-habit').addEventListener('click', function(){
-  window.alert('習慣の追加はこれから実装します');
+/* =========================================================
+   7節 習慣の管理（追加・変更・達成済み・削除）
+   ========================================================= */
+
+let habitSheetMode = 'add';   /* 'add' | 'edit' */
+let habitSheetId = null;
+let habitFormColor = COLORS[0];
+let habitStartDate = null;
+let habitCalMonth = null;
+
+const HABIT_CAL = { title: 'habit-cal-title', grid: 'habit-cal-grid', next: 'habit-cal-next' };
+
+function nextHabitId(){
+  const used = {};
+  for (const habit of state.habits) used[habit.id] = true;
+  let n = 1;
+  while (used['h' + n]) n += 1;
+  return 'h' + n;
+}
+
+function nextOrder(){
+  let max = -1;
+  for (const habit of state.habits) {
+    if (!habit.archived && habit.order > max) max = habit.order;
+  }
+  return max + 1;
+}
+
+/* 並べ替えの前に、稼働中の order を 0,1,2… に振り直しておく
+   （移行データや復帰した習慣で order が重なることがあるため） */
+function normalizeOrders(){
+  activeHabits().forEach(function(habit, i){ habit.order = i; });
+}
+
+function buildColorRow(){
+  const row = document.getElementById('habit-colors');
+  row.textContent = '';
+  for (const color of COLORS) {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'color-swatch';
+    swatch.dataset.color = color;
+    swatch.style.background = color;
+    swatch.setAttribute('aria-label', color);
+    row.appendChild(swatch);
+  }
+}
+
+function paintColorRow(){
+  for (const swatch of document.querySelectorAll('#habit-colors .color-swatch')) {
+    swatch.classList.toggle('is-selected', swatch.dataset.color === habitFormColor);
+  }
+}
+
+function showHabitError(text){
+  const error = document.getElementById('habit-error');
+  error.textContent = text;
+  error.hidden = false;
+}
+
+function closeHabitCalendar(){
+  document.getElementById('habit-calendar').hidden = true;
+  document.getElementById('habit-start-button').setAttribute('aria-expanded', 'false');
+}
+
+function renderHabitCalendar(){
+  if (habitCalMonth === null) return;
+  /* 変更のときは、その習慣の記録も塗っておく。
+     記録より後ろの日を開始日に選んでしまうのが見て分かるように。 */
+  const paint = habitSheetMode === 'edit' ? findHabit(habitSheetId) : null;
+  renderMonthGrid(HABIT_CAL, habitCalMonth, habitStartDate, paint);
+}
+
+function syncHabitSheet(){
+  const adding = habitSheetMode === 'add';
+
+  document.getElementById('habit-heading').textContent = adding ? '習慣を追加' : '習慣の設定';
+  document.getElementById('habit-save').textContent = adding ? '追加' : '保存';
+  document.getElementById('habit-actions').hidden = adding;
+  document.getElementById('habit-start-label').textContent =
+    habitStartDate === null ? '' : formatDateJa(habitStartDate);
+
+  const save = document.getElementById('habit-save');
+  save.style.background = habitFormColor;
+  save.style.color = readableOn(habitFormColor);
+
+  paintColorRow();
+
+  if (!adding) {
+    const habit = findHabit(habitSheetId);
+    if (habit === null) return;
+
+    /* 達成済みにする／稼働中に戻す */
+    document.getElementById('habit-archive').textContent =
+      habit.archived ? '稼働中に戻す' : '達成済みにする';
+  }
+}
+
+function openHabitSheet(mode, habitId){
+  habitSheetMode = mode;
+  habitSheetId = habitId || null;
+
+  const name = document.getElementById('habit-name');
+  document.getElementById('habit-error').hidden = true;
+  closeHabitCalendar();
+
+  if (mode === 'add') {
+    name.value = '';
+    habitFormColor = COLORS[0];
+    habitStartDate = dateKey(today());   /* 既定は今日 */
+  } else {
+    const habit = findHabit(habitId);
+    if (habit === null) return;
+    name.value = habit.name;
+    habitFormColor = habit.color;
+    habitStartDate = habit.startDate;
+  }
+
+  syncHabitSheet();
+  document.getElementById('habit-sheet').hidden = false;
+}
+
+function closeHabitSheet(){
+  habitSheetId = null;
+  closeHabitCalendar();
+  document.getElementById('habit-sheet').hidden = true;
+}
+
+/* 変更が画面に出ている場所すべてを描き直す */
+function refreshAfterHabitChange(){
+  saveState();
+  render();
+  if (!document.getElementById('detail-view').hidden) renderDetail();
+  if (!document.getElementById('reorder-view').hidden) renderReorder();
+  if (!document.getElementById('archived-view').hidden) renderArchived();
+}
+
+function saveHabitSheet(){
+  const name = document.getElementById('habit-name').value.trim();
+  if (name === '') {
+    showHabitError('名前を入れてください');
+    return;
+  }
+
+  if (habitSheetMode === 'add') {
+    state.habits.push({
+      id: nextHabitId(),
+      name: name,
+      color: habitFormColor,
+      startDate: habitStartDate,
+      order: nextOrder(),
+      archived: false,
+      completedDate: null,
+      records: {}
+    });
+  } else {
+    const habit = findHabit(habitSheetId);
+    if (habit === null) return;
+    habit.name = name;
+    habit.color = habitFormColor;
+    habit.startDate = habitStartDate;   /* 打ち間違えを直せるように */
+  }
+
+  closeHabitSheet();
+  refreshAfterHabitChange();
+}
+
+/* --- 並び替え専用の一覧 ---
+   稼働中の習慣を縦に並べ、その場で上下ボタンで動かす。
+   移動のたびにこの画面を描き直すので、ホームへ戻らずに結果が見える。 */
+
+function renderReorder(){
+  const list = document.getElementById('reorder-list');
+  const habits = activeHabits();
+
+  list.textContent = '';
+  habits.forEach(function(habit, at){
+    const row = document.createElement('div');
+    row.className = 'reorder-row';
+
+    const dot = document.createElement('span');
+    dot.className = 'arch-dot';
+    dot.style.background = habit.color;
+    row.appendChild(dot);
+
+    const name = document.createElement('span');
+    name.className = 'reorder-name';
+    name.textContent = habit.name;
+    row.appendChild(name);
+
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.className = 'reorder-step';
+    up.dataset.moveId = habit.id;
+    up.dataset.step = '-1';
+    up.setAttribute('aria-label', habit.name + ' を上へ');
+    up.textContent = '↑';
+    up.disabled = (at === 0);
+    row.appendChild(up);
+
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.className = 'reorder-step';
+    down.dataset.moveId = habit.id;
+    down.dataset.step = '1';
+    down.setAttribute('aria-label', habit.name + ' を下へ');
+    down.textContent = '↓';
+    down.disabled = (at === habits.length - 1);
+    row.appendChild(down);
+
+    list.appendChild(row);
+  });
+
+  document.getElementById('reorder-empty').hidden = habits.length > 0;
+}
+
+function moveHabit(habitId, step){
+  const habit = findHabit(habitId);
+  if (habit === null || habit.archived) return;
+
+  normalizeOrders();
+  const list = activeHabits();
+  const at = list.indexOf(habit);
+  const to = at + step;
+  if (to < 0 || to >= list.length) return;
+
+  const other = list[to];
+  const swap = habit.order;
+  habit.order = other.order;
+  other.order = swap;
+
+  saveState();
+  render();
+  renderReorder();
+}
+
+function openReorder(){
+  renderReorder();
+  showView('reorder-view');
+}
+
+/* 達成済みにする … ホームから外し、completedDate に最終記録日を入れる。
+   記録は消さない。稼働中に戻せる。 */
+function toggleArchive(){
+  const habit = findHabit(habitSheetId);
+  if (habit === null) return;
+
+  if (habit.archived) {
+    habit.archived = false;
+    habit.completedDate = null;
+    habit.order = nextOrder();
+    closeHabitSheet();
+    refreshAfterHabitChange();
+    return;
+  }
+
+  habit.archived = true;
+  habit.completedDate = lastRecordedDate(habit);
+  closeHabitSheet();
+  refreshAfterHabitChange();
+
+  /* ホームから外れるので、その習慣の詳細画面には留まらない */
+  if (!document.getElementById('detail-view').hidden) showView('home-view');
+}
+
+function deleteHabit(){
+  const habit = findHabit(habitSheetId);
+  if (habit === null) return;
+
+  const ok = window.confirm(
+    '「' + habit.name + '」を削除します。\n' +
+    totalDays(habit) + '日ぶんの記録も一緒に消えます。\n' +
+    'この操作は元に戻せません。よろしいですか？'
+  );
+  if (!ok) return;
+
+  state.habits = state.habits.filter(function(x){ return x.id !== habit.id; });
+  closeHabitSheet();
+  refreshAfterHabitChange();
+  showView('home-view');
+}
+
+/* --- 達成済み一覧 --- */
+
+function renderArchived(){
+  const list = document.getElementById('archived-list');
+  const archived = state.habits.filter(function(h){ return h.archived; });
+
+  list.textContent = '';
+  for (const habit of archived) {
+    const row = document.createElement('div');
+    row.className = 'arch-row';
+
+    const dot = document.createElement('span');
+    dot.className = 'arch-dot';
+    dot.style.background = habit.color;
+    row.appendChild(dot);
+
+    const body = document.createElement('div');
+    body.className = 'arch-body';
+
+    const name = document.createElement('button');
+    name.type = 'button';
+    name.className = 'arch-name';
+    name.dataset.habitId = habit.id;
+    name.textContent = habit.name;
+    body.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'arch-meta';
+    meta.textContent = totalDays(habit) + '日'
+      + (habit.completedDate === null ? '' : '・' + habit.completedDate.replace(/-/g, '/') + ' まで');
+    body.appendChild(meta);
+
+    row.appendChild(body);
+
+    const restore = document.createElement('button');
+    restore.type = 'button';
+    restore.className = 'arch-restore';
+    restore.dataset.restoreId = habit.id;
+    restore.textContent = '稼働中に戻す';
+    row.appendChild(restore);
+
+    list.appendChild(row);
+  }
+
+  document.getElementById('archived-empty').hidden = archived.length > 0;
+}
+
+function openArchived(){
+  renderArchived();
+  showView('archived-view');
+}
+
+/* --- 配線 --- */
+
+buildColorRow();
+
+document.getElementById('habit-grid').addEventListener('click', function(event){
+  if (event.target.closest('.add-card') !== null) openHabitSheet('add');
+});
+
+document.getElementById('habit-colors').addEventListener('click', function(event){
+  const swatch = event.target.closest('.color-swatch');
+  if (swatch === null) return;
+  habitFormColor = swatch.dataset.color;
+  syncHabitSheet();
+});
+
+document.getElementById('habit-start-button').addEventListener('click', function(){
+  const calendar = document.getElementById('habit-calendar');
+  if (!calendar.hidden) {
+    closeHabitCalendar();
+    return;
+  }
+  habitCalMonth = monthStart(parseDate(habitStartDate));
+  renderHabitCalendar();
+  calendar.hidden = false;
+  document.getElementById('habit-start-button').setAttribute('aria-expanded', 'true');
+});
+
+document.getElementById('habit-cal-prev').addEventListener('click', function(){
+  habitCalMonth = new Date(habitCalMonth.getFullYear(), habitCalMonth.getMonth() - 1, 1);
+  renderHabitCalendar();
+});
+
+document.getElementById('habit-cal-next').addEventListener('click', function(){
+  const next = new Date(habitCalMonth.getFullYear(), habitCalMonth.getMonth() + 1, 1);
+  if (next > monthStart(today())) return;
+  habitCalMonth = next;
+  renderHabitCalendar();
+});
+
+document.getElementById('habit-cal-grid').addEventListener('click', function(event){
+  const cell = event.target.closest('.cal-day');
+  if (cell === null || cell.disabled) return;
+  habitStartDate = cell.dataset.date;
+  closeHabitCalendar();
+  syncHabitSheet();
+});
+
+document.getElementById('habit-save').addEventListener('click', saveHabitSheet);
+document.getElementById('habit-archive').addEventListener('click', toggleArchive);
+document.getElementById('habit-delete').addEventListener('click', deleteHabit);
+
+document.getElementById('habit-sheet').addEventListener('click', function(event){
+  if (event.target.closest('[data-habit-cancel]') !== null) closeHabitSheet();
+});
+
+document.getElementById('open-reorder').addEventListener('click', openReorder);
+document.getElementById('close-reorder').addEventListener('click', function(){
+  showView('settings-view');
+});
+
+document.getElementById('reorder-list').addEventListener('click', function(event){
+  const button = event.target.closest('[data-move-id]');
+  if (button === null || button.disabled) return;
+  moveHabit(button.dataset.moveId, Number(button.dataset.step));
+});
+
+document.getElementById('open-archived').addEventListener('click', openArchived);
+document.getElementById('close-archived').addEventListener('click', function(){
+  showView('settings-view');
+});
+
+document.getElementById('archived-list').addEventListener('click', function(event){
+  const restore = event.target.closest('[data-restore-id]');
+  if (restore !== null) {
+    habitSheetId = restore.dataset.restoreId;
+    toggleArchive();
+    return;
+  }
+  const name = event.target.closest('.arch-name');
+  if (name !== null) openDetail(name.dataset.habitId);
 });
 
 state = loadState();
