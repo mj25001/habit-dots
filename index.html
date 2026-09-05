@@ -135,6 +135,113 @@ body{
   cursor:pointer;
 }
 
+/* --- 8節 設定画面 --- */
+#home-head{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:10px;
+}
+
+.icon-button{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  background:transparent;
+  color:var(--sub);
+  font-size:20px;
+  line-height:1;
+  padding:6px 4px;
+  cursor:pointer;
+}
+
+.screen-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+.screen-head h1{
+  margin:0;
+  font-size:17px;
+  font-weight:600;
+}
+
+.text-button{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  background:transparent;
+  color:var(--sub);
+  font-family:inherit;
+  font-size:15px;
+  padding:4px 0;
+  cursor:pointer;
+}
+
+#settings-view h2{
+  margin:0 0 16px;
+  font-size:15px;
+  font-weight:600;
+}
+
+.backup-block{
+  margin-bottom:28px;
+}
+
+.backup-block h3{
+  margin:0 0 4px;
+  font-size:14px;
+  font-weight:600;
+}
+
+.hint{
+  margin:0 0 10px;
+  color:var(--sub);
+  font-size:12px;
+  line-height:1.5;
+}
+
+#export-text,
+#import-text{
+  display:block;
+  width:100%;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px;
+  padding:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;
+  line-height:1.5;
+  resize:vertical;
+}
+
+.wide-button{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin-top:10px;
+  border:0;
+  border-radius:12px;
+  padding:13px;
+  background:var(--card);
+  color:var(--text);
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+#import-message{
+  margin:12px 0 0;
+  font-size:13px;
+  line-height:1.5;
+}
+
+#import-message.is-ok    { color:#3FC57D; }
+#import-message.is-error { color:#E5484D; }
+
 /* --- 5節 「メモを追加」の帯 --- */
 #memo-band{
   position:fixed;
@@ -271,11 +378,41 @@ body{
 <body>
 
 <main>
-  <div id="habit-grid" hidden></div>
-  <div id="empty-state" hidden>
-    <p>習慣がまだありません</p>
-    <button type="button" class="add-button" id="add-habit">習慣を追加</button>
+  <div id="home-view">
+    <div id="home-head">
+      <button type="button" class="icon-button" id="open-settings" aria-label="設定">⚙</button>
+    </div>
+    <div id="habit-grid" hidden></div>
+    <div id="empty-state" hidden>
+      <p>習慣がまだありません</p>
+      <button type="button" class="add-button" id="add-habit">習慣を追加</button>
+    </div>
   </div>
+
+  <!-- 8節 設定画面 -->
+  <section id="settings-view" hidden>
+    <div class="screen-head">
+      <button type="button" class="text-button" id="close-settings">← 戻る</button>
+      <h1>設定</h1>
+    </div>
+
+    <h2>データのバックアップ</h2>
+
+    <section class="backup-block">
+      <h3>書き出し</h3>
+      <p class="hint">この内容をすべてコピーして保管してください。</p>
+      <textarea id="export-text" rows="8" readonly></textarea>
+      <button type="button" class="wide-button" id="export-select">すべて選択</button>
+    </section>
+
+    <section class="backup-block">
+      <h3>読み込み</h3>
+      <p class="hint">JSON を貼り付けて「読み込む」を押すと、全データが置き換わります。</p>
+      <textarea id="import-text" rows="8" placeholder="ここに JSON を貼り付け"></textarea>
+      <button type="button" class="wide-button" id="import-run">読み込む</button>
+      <p id="import-message" hidden></p>
+    </section>
+  </section>
 </main>
 
 <!-- 5節 記録が付いた直後に約4秒出る帯 -->
@@ -649,7 +786,8 @@ function hideBand(){
    日付の見出し、複数行のテキスト欄、「完了」ボタン
    ========================================================= */
 
-let memoTarget = null;   /* { habitId, key } */
+let memoTarget = null;     /* { habitId, key } */
+let memoOpenedWith = '';   /* 開いたときのテキスト欄の内容 */
 
 function openMemo(){
   if (bandTarget === null) return;
@@ -667,15 +805,27 @@ function openMemo(){
 
   const text = document.getElementById('memo-text');
   text.value = habit.records[target.key];
+  memoOpenedWith = text.value;
 
   document.getElementById('memo-sheet').hidden = false;
   text.focus();
 }
 
-/* 書きかけを保存せずに閉じる */
-function cancelMemo(){
+function closeMemoSheet(){
   memoTarget = null;
+  memoOpenedWith = '';
   document.getElementById('memo-sheet').hidden = true;
+}
+
+/* 「完了」以外で閉じるとき。
+   開いたときの内容から変更されている場合だけ確認を出す。
+   保存済みメモを開いて何も変えずに閉じるときは確認しない。 */
+function cancelMemo(){
+  if (memoTarget !== null && document.getElementById('memo-text').value !== memoOpenedWith) {
+    const ok = window.confirm('書きかけのメモは保存されません。よろしいですか？');
+    if (!ok) return;
+  }
+  closeMemoSheet();
 }
 
 /* 「完了」… メモを記録に書き込む */
@@ -687,7 +837,7 @@ function saveMemo(){
       saveState();
     }
   }
-  cancelMemo();
+  closeMemoSheet();
 }
 
 /* =========================================================
@@ -754,6 +904,82 @@ document.getElementById('memo-sheet').addEventListener('click', function(event){
 
 document.addEventListener('keydown', function(event){
   if (event.key === 'Escape' && !document.getElementById('memo-sheet').hidden) cancelMemo();
+});
+
+/* =========================================================
+   8節 データのバックアップ
+   ========================================================= */
+
+function showImportMessage(text, ok){
+  const message = document.getElementById('import-message');
+  message.textContent = text;
+  message.classList.toggle('is-ok', ok);
+  message.classList.toggle('is-error', !ok);
+  message.hidden = false;
+}
+
+/* 書き出し … 全データの JSON をテキスト欄に表示する。
+   ファイルのダウンロードは使わない。 */
+function openSettings(){
+  hideBand();
+
+  document.getElementById('export-text').value = JSON.stringify(state, null, 2);
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-message').hidden = true;
+
+  document.getElementById('home-view').hidden = true;
+  document.getElementById('settings-view').hidden = false;
+  window.scrollTo(0, 0);
+}
+
+function closeSettings(){
+  document.getElementById('settings-view').hidden = true;
+  document.getElementById('home-view').hidden = false;
+  window.scrollTo(0, 0);
+}
+
+/* 読み込み … 貼り付けた JSON で全データを置き換える。
+   受け付ける形式は2つ（normalizeState / normalizeRecords が両方を扱う）。
+   壊れた JSON は「読み込めませんでした」と出して何も変更しない。 */
+function runImport(){
+  const raw = document.getElementById('import-text').value;
+
+  /* 先に全部組み立てて、成功したときだけ差し替える。
+     途中で失敗しても state には手を付けない。 */
+  let next = null;
+  try {
+    next = normalizeState(JSON.parse(raw));
+  } catch (e) {
+    showImportMessage('読み込めませんでした', false);
+    return;
+  }
+
+  if (state.habits.length > 0) {
+    const ok = window.confirm(
+      'いまのデータを、貼り付けた内容で全部置き換えます。\n' +
+      'この操作は元に戻せません。よろしいですか？'
+    );
+    if (!ok) return;
+  }
+
+  state = next;
+  saveState();
+  render();
+
+  const active = activeHabits().length;
+  showImportMessage(
+    state.habits.length + '件の習慣を読み込みました（稼働中 ' + active + '件）', true
+  );
+}
+
+document.getElementById('open-settings').addEventListener('click', openSettings);
+document.getElementById('close-settings').addEventListener('click', closeSettings);
+document.getElementById('import-run').addEventListener('click', runImport);
+
+document.getElementById('export-select').addEventListener('click', function(){
+  const text = document.getElementById('export-text');
+  text.focus();
+  text.select();
 });
 
 /* 習慣の追加は 7節。実装の順番では 4 番目 */
