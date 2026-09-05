@@ -95,6 +95,15 @@ body{
 }
 
 .card .name{
+  appearance:none;
+  -webkit-appearance:none;
+  display:block;
+  width:100%;
+  border:0;
+  background:transparent;
+  padding:0;
+  font-family:inherit;
+  cursor:pointer;
   margin-top:3px;
   text-align:center;
   font-size:12px;
@@ -133,6 +142,249 @@ body{
   font-size:15px;
   font-weight:600;
   cursor:pointer;
+}
+
+/* --- 6節 詳細画面（履歴） --- */
+#detail-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+#detail-name{
+  margin:0;
+  flex:1;
+  min-width:0;
+  font-size:17px;
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+#detail-summary{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:22px;
+}
+
+#detail-status{
+  color:var(--sub);
+  font-size:13px;
+}
+
+#detail-daynumber{
+  font-size:15px;
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+
+/* タイムライン */
+.tl-row{
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding-bottom:calc(16px + var(--gap, 0px));
+}
+
+/* 記録が無い期間は、線だけが伸びて間隔が空く */
+.tl-row::before{
+  content:'';
+  position:absolute;
+  left:13px;
+  top:30px;
+  bottom:0;
+  width:2px;
+  background:rgba(255,255,255,0.15);
+}
+
+.tl-row.is-last{ padding-bottom:0; }
+.tl-row.is-last::before{ display:none; }
+
+.tl-badge{
+  flex:0 0 auto;
+  width:28px;
+  height:28px;
+  border-radius:7px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+
+.tl-body{
+  flex:1;
+  min-width:0;
+  padding-top:2px;
+}
+
+.tl-line{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+}
+
+.tl-date{
+  font-size:14px;
+  font-variant-numeric:tabular-nums;
+}
+
+.tl-dayno{
+  color:var(--sub);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+}
+
+.tl-memo{
+  margin-top:3px;
+  color:var(--sub);
+  font-size:13px;
+  line-height:1.5;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+.tl-more{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  background:transparent;
+  color:var(--sub);
+  font-size:18px;
+  line-height:1;
+  padding:4px 6px;
+  cursor:pointer;
+}
+
+#detail-empty{
+  color:var(--sub);
+  font-size:13px;
+}
+
+#detail-more{ margin-top:4px; }
+
+/* 一覧の下の「＋」 */
+#detail-add{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin-top:22px;
+  border:1px dashed rgba(255,255,255,0.25);
+  border-radius:12px;
+  padding:13px;
+  background:transparent;
+  color:var(--text);
+  font-family:inherit;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* --- 6節 記録の入力（日付を選んで追加・編集） --- */
+.date-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.date-step{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  border-radius:10px;
+  width:40px;
+  height:40px;
+  background:var(--bg);
+  color:var(--text);
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.date-step:disabled{ opacity:0.35; cursor:default; }
+
+/* 日付そのものをタップすると端末の日付ピッカーが開く */
+.date-display{
+  position:relative;
+  flex:1;
+  text-align:center;
+  font-size:15px;
+  font-weight:600;
+  padding:10px 0;
+}
+
+.date-display input[type="date"]{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  opacity:0;
+  border:0;
+  padding:0;
+  cursor:pointer;
+}
+
+#entry-memo{
+  display:block;
+  width:100%;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px;
+  padding:12px;
+  font-family:inherit;
+  font-size:15px;
+  line-height:1.5;
+  resize:vertical;
+}
+
+.danger-button{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin-top:8px;
+  border:0;
+  border-radius:12px;
+  padding:13px;
+  background:transparent;
+  color:#E5484D;
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* --- 5節 過去のマスをタップしたときの案内 --- */
+#toast{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:calc(env(safe-area-inset-bottom) + 78px);
+  z-index:25;
+  display:flex;
+  justify-content:center;
+  padding:0 16px;
+  pointer-events:none;
+}
+
+#toast span{
+  background:var(--card);
+  color:var(--text);
+  border-radius:999px;
+  padding:11px 20px;
+  font-size:13px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  animation:band-in 180ms ease-out;
 }
 
 /* --- 8節 設定画面 --- */
@@ -278,7 +530,8 @@ body{
 }
 
 /* --- 5節 メモ入力欄 --- */
-#memo-sheet{
+#memo-sheet,
+#entry-sheet{
   position:fixed;
   inset:0;
   z-index:30;
@@ -367,7 +620,8 @@ body{
 @media (prefers-reduced-motion: reduce){
   .dot.is-pop,
   .band-button,
-  .sheet-panel{
+  .sheet-panel,
+  #toast span{
     animation:none;
   }
 }
@@ -388,6 +642,26 @@ body{
       <button type="button" class="add-button" id="add-habit">習慣を追加</button>
     </div>
   </div>
+
+  <!-- 6節 詳細画面（履歴） -->
+  <section id="detail-view" hidden>
+    <div id="detail-head">
+      <button type="button" class="text-button" id="close-detail">← 戻る</button>
+      <h1 id="detail-name"></h1>
+      <button type="button" class="icon-button" id="detail-settings" aria-label="習慣の設定">⚙</button>
+    </div>
+
+    <div id="detail-summary">
+      <span id="detail-status"></span>
+      <span id="detail-daynumber"></span>
+    </div>
+
+    <div id="detail-list"></div>
+    <p id="detail-empty" hidden>まだ記録がありません。</p>
+    <button type="button" class="wide-button" id="detail-more" hidden>もっと見る</button>
+
+    <button type="button" id="detail-add">＋</button>
+  </section>
 
   <!-- 8節 設定画面 -->
   <section id="settings-view" hidden>
@@ -418,6 +692,33 @@ body{
 <!-- 5節 記録が付いた直後に約4秒出る帯 -->
 <div id="memo-band" hidden>
   <button type="button" class="band-button" id="memo-band-button">メモを追加</button>
+</div>
+
+<!-- 5節 過去のマスをタップしたときの案内 -->
+<div id="toast" hidden><span></span></div>
+
+<!-- 6節 記録の入力（「＋」と「⋯」から開く） -->
+<div id="entry-sheet" hidden>
+  <div class="sheet-backdrop" data-entry-cancel></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="entry-heading">
+    <div class="sheet-head">
+      <h2 id="entry-heading"></h2>
+      <button type="button" class="sheet-close" data-entry-cancel aria-label="閉じる">×</button>
+    </div>
+
+    <div class="date-row">
+      <button type="button" class="date-step" id="entry-prev" aria-label="前の日">‹</button>
+      <div class="date-display">
+        <span id="entry-date-label"></span>
+        <input type="date" id="entry-date-input" aria-label="日付を選ぶ">
+      </div>
+      <button type="button" class="date-step" id="entry-next" aria-label="次の日">›</button>
+    </div>
+
+    <textarea id="entry-memo" rows="4" placeholder="メモ（任意）"></textarea>
+    <button type="button" class="sheet-done" id="entry-save">完了</button>
+    <button type="button" class="danger-button" id="entry-delete" hidden>記録を取り消す</button>
+  </div>
 </div>
 
 <!-- 5節 メモ入力欄 -->
@@ -709,8 +1010,11 @@ function buildCard(habit, base){
   count.textContent = '🔥 ' + totalDays(habit);
   card.appendChild(count);
 
-  const name = document.createElement('div');
+  /* 習慣名をタップすると詳細画面（6節） */
+  const name = document.createElement('button');
+  name.type = 'button';
   name.className = 'name';
+  name.dataset.habitId = habit.id;
   name.textContent = habit.name;
   card.appendChild(name);
 
@@ -885,12 +1189,26 @@ function toggleRecord(habit, key, dot, card){
 }
 
 document.getElementById('habit-grid').addEventListener('click', function(event){
+  /* 習慣名 → 詳細画面（6節） */
+  const nameButton = event.target.closest('.name');
+  if (nameButton !== null) {
+    openDetail(nameButton.dataset.habitId);
+    return;
+  }
+
   const dot = event.target.closest('.dot');
   if (dot === null) return;
 
   const card = dot.closest('.card');
   const habit = findHabit(card.dataset.habitId);
   if (habit === null) return;
+
+  /* タップできるのは今日のマスだけ。
+     過去のマスはデータを一切変更せず、案内だけ出す。 */
+  if (dot.dataset.date !== dateKey(today())) {
+    showToast('過去の記録は履歴から追加できます');
+    return;
+  }
 
   toggleRecord(habit, dot.dataset.date, dot, card);
 });
@@ -903,7 +1221,300 @@ document.getElementById('memo-sheet').addEventListener('click', function(event){
 });
 
 document.addEventListener('keydown', function(event){
-  if (event.key === 'Escape' && !document.getElementById('memo-sheet').hidden) cancelMemo();
+  if (event.key !== 'Escape') return;
+  if (!document.getElementById('memo-sheet').hidden) cancelMemo();
+  else if (!document.getElementById('entry-sheet').hidden) cancelEntry();
+});
+
+/* =========================================================
+   画面の切り替え
+   ========================================================= */
+
+const VIEWS = ['home-view', 'detail-view', 'settings-view'];
+
+function showView(id){
+  hideBand();
+  for (const view of VIEWS) {
+    document.getElementById(view).hidden = (view !== id);
+  }
+  window.scrollTo(0, 0);
+}
+
+/* 5節 過去のマスをタップしたときの案内（2秒ほど） */
+const TOAST_MS = 2000;
+let toastTimer = null;
+
+function showToast(text){
+  const toast = document.getElementById('toast');
+  toast.querySelector('span').textContent = text;
+  toast.hidden = false;
+
+  if (toastTimer !== null) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    toast.hidden = true;
+    toastTimer = null;
+  }, TOAST_MS);
+}
+
+/* =========================================================
+   6節 詳細画面（履歴）
+   ========================================================= */
+
+const DETAIL_PAGE = 100;
+
+let detailHabitId = null;
+let detailLimit = DETAIL_PAGE;
+
+/* バッジの数字が読める文字色を選ぶ（7色とも使うため） */
+function readableOn(color){
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#1C1C1E' : '#FFFFFF';
+}
+
+/* 新しい順。文字列比較ではなく日付オブジェクトで並べる */
+function recordKeysNewestFirst(habit){
+  return Object.keys(habit.records).sort(function(a, b){
+    return parseDate(b).getTime() - parseDate(a).getTime();
+  });
+}
+
+function buildTimelineRow(habit, key, olderKey, isLast){
+  const date = parseDate(key);
+
+  const row = document.createElement('div');
+  row.className = 'tl-row';
+  if (isLast) row.classList.add('is-last');
+
+  /* 記録が無い期間は、線だけが伸びて間隔が空く */
+  if (olderKey !== undefined) {
+    const gap = daysBetween(parseDate(olderKey), date) - 1;
+    if (gap > 0) row.style.setProperty('--gap', Math.min(gap, 14) * 3 + 'px');
+  }
+
+  /* 左のバッジ＝その日が連続何日目か */
+  const badge = document.createElement('div');
+  badge.className = 'tl-badge';
+  badge.style.background = habit.color;
+  badge.style.color = readableOn(habit.color);
+  badge.textContent = streakEndingOn(habit, date);
+  row.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'tl-body';
+
+  const line = document.createElement('div');
+  line.className = 'tl-line';
+
+  const dateText = document.createElement('span');
+  dateText.className = 'tl-date';
+  dateText.textContent = key.replace(/-/g, '/');
+  line.appendChild(dateText);
+
+  const dayNo = document.createElement('span');
+  dayNo.className = 'tl-dayno';
+  dayNo.textContent = dayNumber(habit, date) + '日目';
+  line.appendChild(dayNo);
+
+  body.appendChild(line);
+
+  const memo = habit.records[key];
+  if (memo !== '') {
+    const memoText = document.createElement('div');
+    memoText.className = 'tl-memo';
+    memoText.textContent = memo;
+    body.appendChild(memoText);
+  }
+
+  row.appendChild(body);
+
+  /* 右端の「⋯」から、その記録の編集・削除 */
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'tl-more';
+  more.dataset.date = key;
+  more.setAttribute('aria-label', formatDateJa(key) + ' の記録を編集');
+  more.textContent = '⋯';
+  row.appendChild(more);
+
+  return row;
+}
+
+function renderDetail(){
+  const habit = findHabit(detailHabitId);
+  if (habit === null) {
+    showView('home-view');
+    return;
+  }
+
+  const base = today();
+  const todayKey = dateKey(base);
+
+  document.getElementById('detail-name').textContent = habit.name;
+  document.getElementById('detail-daynumber').textContent = dayNumber(habit, base) + '日目';
+
+  /* 今日まだ記録が無ければ「今日も完了させましょう！」、
+     記録済みなら「◯日連続達成中」 */
+  document.getElementById('detail-status').textContent =
+    hasRecord(habit, todayKey)
+      ? currentStreak(habit, base) + '日連続達成中'
+      : '今日も完了させましょう！';
+
+  const keys = recordKeysNewestFirst(habit);
+  const shown = keys.slice(0, detailLimit);
+
+  const list = document.getElementById('detail-list');
+  list.textContent = '';
+  shown.forEach(function(key, i){
+    list.appendChild(buildTimelineRow(habit, key, shown[i + 1], i === shown.length - 1));
+  });
+
+  document.getElementById('detail-empty').hidden = keys.length > 0;
+  document.getElementById('detail-more').hidden = keys.length <= shown.length;
+}
+
+function openDetail(habitId){
+  detailHabitId = habitId;
+  detailLimit = DETAIL_PAGE;
+  renderDetail();
+  showView('detail-view');
+}
+
+/* =========================================================
+   6節 記録の入力（過去の日はここから）
+   ========================================================= */
+
+let entryHabitId = null;
+let entryDate = null;
+let entryOpenedWith = '';
+
+function syncEntry(){
+  const habit = findHabit(entryHabitId);
+  if (habit === null) return;
+
+  const todayKey = dateKey(today());
+  const exists = hasRecord(habit, entryDate);
+
+  document.getElementById('entry-date-label').textContent = formatDateJa(entryDate);
+
+  const input = document.getElementById('entry-date-input');
+  input.max = todayKey;          /* 未来には進めない */
+  input.value = entryDate;
+
+  document.getElementById('entry-next').disabled = (entryDate === todayKey);
+
+  /* すでに記録がある日は、その日のメモを読み込んでボタンを「保存」に変える */
+  const memo = document.getElementById('entry-memo');
+  memo.value = exists ? habit.records[entryDate] : '';
+  entryOpenedWith = memo.value;
+
+  document.getElementById('entry-heading').textContent = exists ? '記録を編集' : '記録を追加';
+  document.getElementById('entry-save').textContent = exists ? '保存' : '完了';
+  document.getElementById('entry-delete').hidden = !exists;
+}
+
+function openEntry(habitId, key){
+  entryHabitId = habitId;
+  entryDate = key;
+  syncEntry();
+  document.getElementById('entry-sheet').hidden = false;
+}
+
+function closeEntrySheet(){
+  entryHabitId = null;
+  entryDate = null;
+  entryOpenedWith = '';
+  document.getElementById('entry-sheet').hidden = true;
+}
+
+function cancelEntry(){
+  if (entryDate !== null && document.getElementById('entry-memo').value !== entryOpenedWith) {
+    const ok = window.confirm('書きかけのメモは保存されません。よろしいですか？');
+    if (!ok) return;
+  }
+  closeEntrySheet();
+}
+
+/* 矢印で1日ずつ前後に動かす */
+function shiftEntryDate(days){
+  const next = addDays(parseDate(entryDate), days);
+  if (daysBetween(today(), next) > 0) return;   /* 未来には進めない */
+  entryDate = dateKey(next);
+  syncEntry();
+}
+
+function saveEntry(){
+  const habit = findHabit(entryHabitId);
+  if (habit !== null) {
+    habit.records[entryDate] = document.getElementById('entry-memo').value;
+    saveState();
+  }
+  closeEntrySheet();
+  renderDetail();
+  render();
+}
+
+function deleteEntry(){
+  const habit = findHabit(entryHabitId);
+  if (habit === null) return;
+
+  const memo = habit.records[entryDate];
+  if (memo !== undefined && memo !== '') {
+    const ok = window.confirm(
+      formatDateJa(entryDate) + ' の記録を取り消します。\n' +
+      '書いたメモも一緒に消えます。よろしいですか？\n\n' + memo
+    );
+    if (!ok) return;
+  }
+
+  delete habit.records[entryDate];
+  saveState();
+  closeEntrySheet();
+  renderDetail();
+  render();
+}
+
+document.getElementById('close-detail').addEventListener('click', function(){
+  showView('home-view');
+});
+
+document.getElementById('detail-more').addEventListener('click', function(){
+  detailLimit += DETAIL_PAGE;
+  renderDetail();
+});
+
+document.getElementById('detail-add').addEventListener('click', function(){
+  openEntry(detailHabitId, dateKey(today()));
+});
+
+document.getElementById('detail-list').addEventListener('click', function(event){
+  const more = event.target.closest('.tl-more');
+  if (more === null) return;
+  openEntry(detailHabitId, more.dataset.date);
+});
+
+/* 習慣ごとの設定は 7節。実装の順番では 6 番目 */
+document.getElementById('detail-settings').addEventListener('click', function(){
+  window.alert('習慣の設定はこれから実装します');
+});
+
+document.getElementById('entry-prev').addEventListener('click', function(){ shiftEntryDate(-1); });
+document.getElementById('entry-next').addEventListener('click', function(){ shiftEntryDate(1); });
+document.getElementById('entry-save').addEventListener('click', saveEntry);
+document.getElementById('entry-delete').addEventListener('click', deleteEntry);
+
+/* 日付そのものをタップしたときの端末の日付ピッカー */
+document.getElementById('entry-date-input').addEventListener('change', function(event){
+  const picked = event.target.value;
+  if (!DATE_RE.test(picked)) return;
+  if (daysBetween(today(), parseDate(picked)) > 0) return;
+  entryDate = picked;
+  syncEntry();
+});
+
+document.getElementById('entry-sheet').addEventListener('click', function(event){
+  if (event.target.closest('[data-entry-cancel]') !== null) cancelEntry();
 });
 
 /* =========================================================
@@ -921,21 +1532,14 @@ function showImportMessage(text, ok){
 /* 書き出し … 全データの JSON をテキスト欄に表示する。
    ファイルのダウンロードは使わない。 */
 function openSettings(){
-  hideBand();
-
   document.getElementById('export-text').value = JSON.stringify(state, null, 2);
   document.getElementById('import-text').value = '';
   document.getElementById('import-message').hidden = true;
-
-  document.getElementById('home-view').hidden = true;
-  document.getElementById('settings-view').hidden = false;
-  window.scrollTo(0, 0);
+  showView('settings-view');
 }
 
 function closeSettings(){
-  document.getElementById('settings-view').hidden = true;
-  document.getElementById('home-view').hidden = false;
-  window.scrollTo(0, 0);
+  showView('home-view');
 }
 
 /* 読み込み … 貼り付けた JSON で全データを置き換える。
