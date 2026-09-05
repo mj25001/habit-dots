@@ -54,9 +54,18 @@ body{
 }
 
 .dot{
+  appearance:none;
+  -webkit-appearance:none;
+  display:block;
+  width:100%;
+  padding:0;
+  border:0;
   aspect-ratio:1 / 1;
   border-radius:3px;
   background:var(--dot-empty);
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
 }
 
 .dot.is-done{ background:var(--habit-color); }
@@ -66,6 +75,15 @@ body{
   background:transparent;
   border:1.5px dashed var(--habit-color);
 }
+
+/* 記録が付いたときだけ、少し膨らんで戻る */
+@keyframes dot-pop{
+  0%   { transform:scale(1); }
+  45%  { transform:scale(1.35); }
+  100% { transform:scale(1); }
+}
+
+.dot.is-pop{ animation:dot-pop 260ms ease-out; }
 
 .card .count{
   margin-top:10px;
@@ -117,6 +135,136 @@ body{
   cursor:pointer;
 }
 
+/* --- 5節 「メモを追加」の帯 --- */
+#memo-band{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:calc(env(safe-area-inset-bottom) + 18px);
+  z-index:20;
+  display:flex;
+  justify-content:center;
+  padding:0 16px;
+  pointer-events:none;
+}
+
+.band-button{
+  appearance:none;
+  -webkit-appearance:none;
+  pointer-events:auto;
+  border:0;
+  border-radius:999px;
+  padding:13px 26px;
+  background:var(--card);
+  color:var(--text);
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  animation:band-in 180ms ease-out;
+}
+
+@keyframes band-in{
+  from{ opacity:0; transform:translateY(10px); }
+  to  { opacity:1; transform:none; }
+}
+
+/* --- 5節 メモ入力欄 --- */
+#memo-sheet{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+}
+
+.sheet-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.55);
+}
+
+.sheet-panel{
+  position:relative;
+  background:var(--card);
+  border-radius:16px 16px 0 0;
+  padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
+  animation:sheet-in 200ms ease-out;
+}
+
+@keyframes sheet-in{
+  from{ transform:translateY(100%); }
+  to  { transform:none; }
+}
+
+.sheet-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.sheet-head h2{
+  margin:0;
+  font-size:16px;
+  font-weight:600;
+}
+
+.sheet-close{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  background:transparent;
+  color:var(--sub);
+  font-family:inherit;
+  font-size:22px;
+  line-height:1;
+  padding:4px 8px;
+  cursor:pointer;
+}
+
+#memo-text{
+  display:block;
+  width:100%;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px;
+  padding:12px;
+  font-family:inherit;
+  font-size:15px;
+  line-height:1.5;
+  resize:vertical;
+}
+
+.sheet-done{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin-top:12px;
+  border:0;
+  border-radius:12px;
+  padding:13px;
+  background:var(--bg);
+  color:var(--text);
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* prefers-reduced-motion を尊重する */
+@media (prefers-reduced-motion: reduce){
+  .dot.is-pop,
+  .band-button,
+  .sheet-panel{
+    animation:none;
+  }
+}
+
 [hidden]{ display:none !important; }
 </style>
 </head>
@@ -129,6 +277,24 @@ body{
     <button type="button" class="add-button" id="add-habit">習慣を追加</button>
   </div>
 </main>
+
+<!-- 5節 記録が付いた直後に約4秒出る帯 -->
+<div id="memo-band" hidden>
+  <button type="button" class="band-button" id="memo-band-button">メモを追加</button>
+</div>
+
+<!-- 5節 メモ入力欄 -->
+<div id="memo-sheet" hidden>
+  <div class="sheet-backdrop" data-memo-cancel></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="memo-title">
+    <div class="sheet-head">
+      <h2 id="memo-title"></h2>
+      <button type="button" class="sheet-close" data-memo-cancel aria-label="閉じる">×</button>
+    </div>
+    <textarea id="memo-text" rows="5"></textarea>
+    <button type="button" class="sheet-done" id="memo-done">完了</button>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -182,6 +348,15 @@ function addDays(date, n){
   const d = startOfDay(date);
   d.setDate(d.getDate() + n);
   return d;
+}
+
+const WEEKDAYS = ['日','月','火','水','木','金','土'];
+
+/* 例: 2026年9月4日（金） */
+function formatDateJa(key){
+  const d = parseDate(key);
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'
+    + '（' + WEEKDAYS[d.getDay()] + '）';
 }
 
 /* b - a を日数で返す */
@@ -365,9 +540,11 @@ function buildDots(habit, base){
   for (let i = 0; i < DOT_COUNT; i++) {
     const key = dateKey(addDays(base, -i));
 
-    const dot = document.createElement('div');
+    const dot = document.createElement('button');
+    dot.type = 'button';
     dot.className = 'dot';
     dot.dataset.date = key;
+    dot.setAttribute('aria-label', formatDateJa(key));
 
     if (hasRecord(habit, key)) {
       dot.classList.add('is-done');
@@ -415,6 +592,169 @@ function render(){
   grid.hidden = habits.length === 0;
   empty.hidden = habits.length > 0;
 }
+
+/* カード1枚だけを描き直す。
+   ホーム画面に留まったまま更新するので、画面遷移は起こらない。 */
+function refreshCard(card, habit){
+  const base = today();
+  const dots = card.querySelectorAll('.dot');
+
+  for (let i = 0; i < dots.length; i++) {
+    const key = dateKey(addDays(base, -i));
+    const done = hasRecord(habit, key);
+    dots[i].classList.toggle('is-done', done);
+    dots[i].classList.toggle('is-today-open', !done && i === 0);
+  }
+
+  card.querySelector('.count').textContent = '🔥 ' + totalDays(habit);
+}
+
+function findHabit(id){
+  for (const habit of state.habits) {
+    if (habit.id === id) return habit;
+  }
+  return null;
+}
+
+/* =========================================================
+   5節 「メモを追加」の帯
+   記録が付いた直後に約4秒出る。押さなければ静かに消える。
+   ========================================================= */
+
+const BAND_MS = 4000;
+
+let bandTarget = null;   /* { habitId, key } */
+let bandTimer = null;
+
+function showBand(habitId, key){
+  /* 帯が出ている間に別のマスをタップしたら、対象を新しい記録に差し替える */
+  bandTarget = { habitId: habitId, key: key };
+
+  if (bandTimer !== null) clearTimeout(bandTimer);
+  document.getElementById('memo-band').hidden = false;
+  bandTimer = setTimeout(hideBand, BAND_MS);
+}
+
+function hideBand(){
+  if (bandTimer !== null) {
+    clearTimeout(bandTimer);
+    bandTimer = null;
+  }
+  bandTarget = null;
+  document.getElementById('memo-band').hidden = true;
+}
+
+/* =========================================================
+   5節 メモ入力欄
+   日付の見出し、複数行のテキスト欄、「完了」ボタン
+   ========================================================= */
+
+let memoTarget = null;   /* { habitId, key } */
+
+function openMemo(){
+  if (bandTarget === null) return;
+
+  const target = bandTarget;
+  const habit = findHabit(target.habitId);
+
+  hideBand();
+
+  /* 帯を押すまでの間に記録が外されていたら開かない */
+  if (habit === null || !hasRecord(habit, target.key)) return;
+
+  memoTarget = target;
+  document.getElementById('memo-title').textContent = formatDateJa(target.key);
+
+  const text = document.getElementById('memo-text');
+  text.value = habit.records[target.key];
+
+  document.getElementById('memo-sheet').hidden = false;
+  text.focus();
+}
+
+/* 書きかけを保存せずに閉じる */
+function cancelMemo(){
+  memoTarget = null;
+  document.getElementById('memo-sheet').hidden = true;
+}
+
+/* 「完了」… メモを記録に書き込む */
+function saveMemo(){
+  if (memoTarget !== null) {
+    const habit = findHabit(memoTarget.habitId);
+    if (habit !== null && hasRecord(habit, memoTarget.key)) {
+      habit.records[memoTarget.key] = document.getElementById('memo-text').value;
+      saveState();
+    }
+  }
+  cancelMemo();
+}
+
+/* =========================================================
+   5節 マスのタップ
+   その場で記録が付く／外れる。画面遷移は起こさない。
+   ========================================================= */
+
+function popDot(dot){
+  dot.classList.remove('is-pop');
+  void dot.offsetWidth;   /* アニメーションを再生し直すための reflow */
+  dot.classList.add('is-pop');
+}
+
+function toggleRecord(habit, key, dot, card){
+  if (hasRecord(habit, key)) {
+    /* すでに記録がある日 … 記録が外れる（トグル）
+       メモが入っている場合は、メモも消える旨を確認してから消す */
+    const memo = habit.records[key];
+    if (memo !== '') {
+      const ok = window.confirm(
+        formatDateJa(key) + ' の記録を外します。\n' +
+        '書いたメモも一緒に消えます。よろしいですか？\n\n' + memo
+      );
+      if (!ok) return;
+    }
+
+    delete habit.records[key];
+    saveState();
+    refreshCard(card, habit);
+
+    /* 記録を外したときは帯を出さない。
+       いま出ている帯がこの記録を指していたら引っ込める */
+    if (bandTarget !== null && bandTarget.habitId === habit.id && bandTarget.key === key) {
+      hideBand();
+    }
+    return;
+  }
+
+  /* メモ無しは空文字 */
+  habit.records[key] = '';
+  saveState();
+  refreshCard(card, habit);
+  popDot(dot);
+  showBand(habit.id, key);
+}
+
+document.getElementById('habit-grid').addEventListener('click', function(event){
+  const dot = event.target.closest('.dot');
+  if (dot === null) return;
+
+  const card = dot.closest('.card');
+  const habit = findHabit(card.dataset.habitId);
+  if (habit === null) return;
+
+  toggleRecord(habit, dot.dataset.date, dot, card);
+});
+
+document.getElementById('memo-band-button').addEventListener('click', openMemo);
+document.getElementById('memo-done').addEventListener('click', saveMemo);
+
+document.getElementById('memo-sheet').addEventListener('click', function(event){
+  if (event.target.closest('[data-memo-cancel]') !== null) cancelMemo();
+});
+
+document.addEventListener('keydown', function(event){
+  if (event.key === 'Escape' && !document.getElementById('memo-sheet').hidden) cancelMemo();
+});
 
 /* 習慣の追加は 7節。実装の順番では 4 番目 */
 document.getElementById('add-habit').addEventListener('click', function(){
