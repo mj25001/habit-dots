@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1C1C1E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="習慣">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>習慣記録</title>
 <style>
 :root{
@@ -592,8 +597,8 @@ body{
   cursor:pointer;
 }
 
-/* 今日より先の日は選べない */
-.cal-day.is-future{
+/* 選べない日（今日より先、開始日の下限より前） */
+.cal-day:disabled{
   opacity:0.3;
   cursor:default;
 }
@@ -1207,6 +1212,17 @@ function currentStreak(habit, ref){
   return streakEndingOn(habit, addDays(base, -1));
 }
 
+/* 記録のある最初の日。開始日の下限に使う */
+function earliestRecordedDate(habit){
+  const keys = Object.keys(habit.records);
+  if (keys.length === 0) return null;
+  let min = keys[0];
+  for (const key of keys) {
+    if (parseDate(key) < parseDate(min)) min = key;
+  }
+  return min;
+}
+
 /* 記録のある最終日 */
 function lastRecordedDate(habit){
   const keys = Object.keys(habit.records);
@@ -1816,8 +1832,9 @@ function isCalendarOpen(){
 }
 
 /* 1か月ぶんを描く。記録の入力と、習慣の開始日の両方で使う。
-   paintHabit を渡すと、その習慣の記録がある日を習慣の色で塗る。 */
-function renderMonthGrid(ids, month, selectedKey, paintHabit){
+   paintHabit を渡すと、その習慣の記録がある日を習慣の色で塗る。
+   maxKey を渡すと、今日より手前でもそこで頭打ちにする（開始日の上限）。 */
+function renderMonthGrid(ids, month, selectedKey, paintHabit, maxKey){
   const base = today();
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -1831,6 +1848,13 @@ function renderMonthGrid(ids, month, selectedKey, paintHabit){
   const leading = new Date(year, monthIndex, 1).getDay();
   for (let i = 0; i < leading; i++) {
     grid.appendChild(document.createElement('span'));
+  }
+
+  /* 選べる上限。既定は今日。maxKey がそれより手前ならそちらを使う。 */
+  let ceiling = base;
+  if (maxKey) {
+    const limit = parseDate(maxKey);
+    if (limit < ceiling) ceiling = limit;
   }
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -1850,20 +1874,17 @@ function renderMonthGrid(ids, month, selectedKey, paintHabit){
       cell.style.color = readableOn(paintHabit.color);
     }
 
-    /* 今日より先の日は選べない */
-    if (daysBetween(base, date) > 0) {
-      cell.disabled = true;
-      cell.classList.add('is-future');
-    }
+    /* 上限より後ろの日は選べない */
+    if (daysBetween(ceiling, date) > 0) cell.disabled = true;
 
     if (key === selectedKey) cell.classList.add('is-selected');
 
     grid.appendChild(cell);
   }
 
-  /* 今月より先の月へは進めない */
+  /* 上限のある月より先の月へは進めない */
   document.getElementById(ids.next).disabled =
-    (year === base.getFullYear() && monthIndex === base.getMonth());
+    (year === ceiling.getFullYear() && monthIndex === ceiling.getMonth());
 }
 
 const ENTRY_CAL = { title: 'cal-title', grid: 'cal-grid', next: 'cal-next' };
@@ -2170,12 +2191,20 @@ function closeHabitCalendar(){
   document.getElementById('habit-start-button').setAttribute('aria-expanded', 'false');
 }
 
+/* 開始日の上限＝最古の記録。
+   それより後ろにすると、その記録の通算日数が0や負になるため選べなくする。
+   記録が1件も無い習慣なら上限は無い（今日まで選べる）。 */
+function habitStartCeiling(){
+  if (habitSheetMode !== 'edit') return null;
+  const habit = findHabit(habitSheetId);
+  return habit === null ? null : earliestRecordedDate(habit);
+}
+
 function renderHabitCalendar(){
   if (habitCalMonth === null) return;
-  /* 変更のときは、その習慣の記録も塗っておく。
-     記録より後ろの日を開始日に選んでしまうのが見て分かるように。 */
+  /* 変更のときは、その習慣の記録も塗っておく */
   const paint = habitSheetMode === 'edit' ? findHabit(habitSheetId) : null;
-  renderMonthGrid(HABIT_CAL, habitCalMonth, habitStartDate, paint);
+  renderMonthGrid(HABIT_CAL, habitCalMonth, habitStartDate, paint, habitStartCeiling());
 }
 
 function syncHabitSheet(){
@@ -2523,6 +2552,16 @@ document.getElementById('archived-list').addEventListener('click', function(even
 
 state = loadState();
 render();
+
+/* 1節 オフラインで起動できるように Service Worker を登録する。
+   file:// で開いたときは登録できないが、そのまま動かす。 */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(e){
+      console.warn('Service Worker を登録できませんでした', e);
+    });
+  });
+}
 </script>
 </body>
 </html>
