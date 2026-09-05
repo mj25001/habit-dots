@@ -188,19 +188,19 @@ body{
   position:relative;
   display:flex;
   align-items:flex-start;
-  gap:12px;
-  padding-bottom:calc(16px + var(--gap, 0px));
+  gap:11px;
+  padding-bottom:calc(9px + var(--gap, 0px));
 }
 
-/* 記録が無い期間は、線だけが伸びて間隔が空く */
+/* 記録が無い期間は、線だけが伸びて間隔が空く。線は習慣の色。 */
 .tl-row::before{
   content:'';
   position:absolute;
-  left:13px;
-  top:30px;
+  left:12px;
+  top:27px;
   bottom:0;
   width:2px;
-  background:rgba(255,255,255,0.15);
+  background:var(--habit-color);
 }
 
 .tl-row.is-last{ padding-bottom:0; }
@@ -208,13 +208,13 @@ body{
 
 .tl-badge{
   flex:0 0 auto;
-  width:28px;
-  height:28px;
-  border-radius:7px;
+  width:26px;
+  height:26px;
+  border-radius:6px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:13px;
+  font-size:12px;
   font-weight:700;
   font-variant-numeric:tabular-nums;
 }
@@ -222,7 +222,7 @@ body{
 .tl-body{
   flex:1;
   min-width:0;
-  padding-top:2px;
+  padding-top:1px;
 }
 
 .tl-line{
@@ -243,7 +243,7 @@ body{
 }
 
 .tl-memo{
-  margin-top:3px;
+  margin-top:2px;
   color:var(--sub);
   font-size:13px;
   line-height:1.5;
@@ -313,25 +313,103 @@ body{
 
 .date-step:disabled{ opacity:0.35; cursor:default; }
 
-/* 日付そのものをタップすると端末の日付ピッカーが開く */
+/* 日付そのものをタップすると、その場に月カレンダーが開く */
 .date-display{
-  position:relative;
+  appearance:none;
+  -webkit-appearance:none;
   flex:1;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text);
   text-align:center;
+  font-family:inherit;
   font-size:15px;
   font-weight:600;
   padding:10px 0;
+  cursor:pointer;
 }
 
-.date-display input[type="date"]{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  opacity:0;
+/* --- アプリ内の月カレンダー --- */
+#entry-calendar{
+  margin-bottom:14px;
+  background:var(--bg);
+  border-radius:12px;
+  padding:10px;
+}
+
+.cal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+#cal-title{
+  font-size:14px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+
+.cal-nav{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  border-radius:8px;
+  width:32px;
+  height:32px;
+  background:transparent;
+  color:var(--text);
+  font-size:17px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.cal-nav:disabled{ opacity:0.3; cursor:default; }
+
+.cal-weekdays,
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:3px;
+}
+
+.cal-weekdays{
+  margin-bottom:3px;
+}
+
+.cal-weekdays span{
+  text-align:center;
+  color:var(--sub);
+  font-size:11px;
+  line-height:20px;
+}
+
+.cal-day{
+  appearance:none;
+  -webkit-appearance:none;
   border:0;
   padding:0;
+  aspect-ratio:1 / 1;
+  border-radius:7px;
+  background:var(--dot-empty);
+  color:var(--text);
+  font-family:inherit;
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
   cursor:pointer;
+}
+
+/* 今日より先の日は選べない */
+.cal-day.is-future{
+  opacity:0.3;
+  cursor:default;
+}
+
+.cal-day.is-selected{
+  outline:2px solid var(--text);
+  outline-offset:-2px;
 }
 
 #entry-memo{
@@ -552,6 +630,9 @@ body{
   border-radius:16px 16px 0 0;
   padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
   animation:sheet-in 200ms ease-out;
+  /* カレンダーを開くと縦に伸びるので、小さい画面でもボタンに届くようにする */
+  max-height:100vh;
+  overflow-y:auto;
 }
 
 @keyframes sheet-in{
@@ -708,11 +789,25 @@ body{
 
     <div class="date-row">
       <button type="button" class="date-step" id="entry-prev" aria-label="前の日">‹</button>
-      <div class="date-display">
+      <button type="button" class="date-display" id="entry-date-button"
+              aria-expanded="false" aria-controls="entry-calendar">
         <span id="entry-date-label"></span>
-        <input type="date" id="entry-date-input" aria-label="日付を選ぶ">
-      </div>
+      </button>
       <button type="button" class="date-step" id="entry-next" aria-label="次の日">›</button>
+    </div>
+
+    <!-- アプリ内の月カレンダー -->
+    <div id="entry-calendar" hidden>
+      <div class="cal-head">
+        <button type="button" class="cal-nav" id="cal-prev" aria-label="前の月">‹</button>
+        <span id="cal-title"></span>
+        <button type="button" class="cal-nav" id="cal-next" aria-label="次の月">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>日</span><span>月</span><span>火</span><span>水</span>
+        <span>木</span><span>金</span><span>土</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
     </div>
 
     <textarea id="entry-memo" rows="4" placeholder="メモ（任意）"></textarea>
@@ -1365,6 +1460,7 @@ function renderDetail(){
   const shown = keys.slice(0, detailLimit);
 
   const list = document.getElementById('detail-list');
+  list.style.setProperty('--habit-color', habit.color);   /* つなぐ縦線の色 */
   list.textContent = '';
   shown.forEach(function(key, i){
     list.appendChild(buildTimelineRow(habit, key, shown[i + 1], i === shown.length - 1));
@@ -1389,6 +1485,91 @@ let entryHabitId = null;
 let entryDate = null;
 let entryOpenedWith = '';
 
+/* --- アプリ内の月カレンダー ---
+   iOS Safari では input[type=date] のピッカーが開かない（重ねる方法も
+   showPicker() も効かない）ため、カレンダーは自前で描く。 */
+
+let calMonth = null;   /* 表示中の月の1日 */
+
+function monthStart(date){
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function isCalendarOpen(){
+  return !document.getElementById('entry-calendar').hidden;
+}
+
+function renderCalendar(){
+  const habit = findHabit(entryHabitId);
+  if (habit === null || calMonth === null) return;
+
+  const base = today();
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+
+  document.getElementById('cal-title').textContent = year + '年' + (month + 1) + '月';
+
+  const grid = document.getElementById('cal-grid');
+  grid.textContent = '';
+
+  /* 日〜土の7列に合わせるため、月初の曜日ぶんだけ空ける */
+  const leading = new Date(year, month, 1).getDay();
+  for (let i = 0; i < leading; i++) {
+    grid.appendChild(document.createElement('span'));
+  }
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const key = dateKey(date);
+
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cal-day';
+    cell.dataset.date = key;
+    cell.textContent = day;
+
+    /* その習慣の記録がある日は、習慣の色で塗る */
+    if (hasRecord(habit, key)) {
+      cell.style.background = habit.color;
+      cell.style.color = readableOn(habit.color);
+    }
+
+    /* 今日より先の日は選べない */
+    if (daysBetween(base, date) > 0) {
+      cell.disabled = true;
+      cell.classList.add('is-future');
+    }
+
+    if (key === entryDate) cell.classList.add('is-selected');
+
+    grid.appendChild(cell);
+  }
+
+  /* 今月より先の月へは進めない */
+  document.getElementById('cal-next').disabled =
+    (year === base.getFullYear() && month === base.getMonth());
+}
+
+function openCalendar(){
+  calMonth = monthStart(parseDate(entryDate));
+  renderCalendar();
+  document.getElementById('entry-calendar').hidden = false;
+  document.getElementById('entry-date-button').setAttribute('aria-expanded', 'true');
+}
+
+function closeCalendar(){
+  document.getElementById('entry-calendar').hidden = true;
+  document.getElementById('entry-date-button').setAttribute('aria-expanded', 'false');
+}
+
+function shiftCalMonth(months){
+  const next = new Date(calMonth.getFullYear(), calMonth.getMonth() + months, 1);
+  if (next > monthStart(today())) return;
+  calMonth = next;
+  renderCalendar();
+}
+
 function syncEntry(){
   const habit = findHabit(entryHabitId);
   if (habit === null) return;
@@ -1397,11 +1578,6 @@ function syncEntry(){
   const exists = hasRecord(habit, entryDate);
 
   document.getElementById('entry-date-label').textContent = formatDateJa(entryDate);
-
-  const input = document.getElementById('entry-date-input');
-  input.max = todayKey;          /* 未来には進めない */
-  input.value = entryDate;
-
   document.getElementById('entry-next').disabled = (entryDate === todayKey);
 
   /* すでに記録がある日は、その日のメモを読み込んでボタンを「保存」に変える */
@@ -1410,13 +1586,24 @@ function syncEntry(){
   entryOpenedWith = memo.value;
 
   document.getElementById('entry-heading').textContent = exists ? '記録を編集' : '記録を追加';
-  document.getElementById('entry-save').textContent = exists ? '保存' : '完了';
+
+  const save = document.getElementById('entry-save');
+  save.textContent = exists ? '保存' : '完了';
+  save.style.background = habit.color;
+  save.style.color = readableOn(habit.color);
+
   document.getElementById('entry-delete').hidden = !exists;
+
+  if (isCalendarOpen()) {
+    calMonth = monthStart(parseDate(entryDate));
+    renderCalendar();
+  }
 }
 
 function openEntry(habitId, key){
   entryHabitId = habitId;
   entryDate = key;
+  closeCalendar();
   syncEntry();
   document.getElementById('entry-sheet').hidden = false;
 }
@@ -1425,6 +1612,7 @@ function closeEntrySheet(){
   entryHabitId = null;
   entryDate = null;
   entryOpenedWith = '';
+  closeCalendar();
   document.getElementById('entry-sheet').hidden = true;
 }
 
@@ -1504,12 +1692,21 @@ document.getElementById('entry-next').addEventListener('click', function(){ shif
 document.getElementById('entry-save').addEventListener('click', saveEntry);
 document.getElementById('entry-delete').addEventListener('click', deleteEntry);
 
-/* 日付そのものをタップしたときの端末の日付ピッカー */
-document.getElementById('entry-date-input').addEventListener('change', function(event){
-  const picked = event.target.value;
-  if (!DATE_RE.test(picked)) return;
-  if (daysBetween(today(), parseDate(picked)) > 0) return;
-  entryDate = picked;
+/* 日付をタップすると、その場に月カレンダーが開く */
+document.getElementById('entry-date-button').addEventListener('click', function(){
+  if (isCalendarOpen()) closeCalendar();
+  else openCalendar();
+});
+
+document.getElementById('cal-prev').addEventListener('click', function(){ shiftCalMonth(-1); });
+document.getElementById('cal-next').addEventListener('click', function(){ shiftCalMonth(1); });
+
+/* 日付を選ぶとカレンダーが閉じて、その日付が選ばれた状態になる */
+document.getElementById('cal-grid').addEventListener('click', function(event){
+  const cell = event.target.closest('.cal-day');
+  if (cell === null || cell.disabled) return;
+  entryDate = cell.dataset.date;
+  closeCalendar();
   syncEntry();
 });
 
