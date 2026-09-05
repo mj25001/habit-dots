@@ -669,6 +669,63 @@ body{
 }
 
 /* --- 8節 設定画面 --- */
+/* --- 8節 バックアップを促す帯 --- */
+#backup-notice{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:var(--card);
+  border-radius:12px;
+  padding:10px 12px;
+  margin-bottom:12px;
+}
+
+#backup-notice-share{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:1;
+  min-width:0;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  font-family:inherit;
+  font-size:13px;
+  line-height:1.4;
+  text-align:left;
+  padding:0;
+  cursor:pointer;
+}
+
+#backup-notice-later{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  border-radius:8px;
+  padding:7px 10px;
+  background:var(--bg);
+  color:var(--sub);
+  font-family:inherit;
+  font-size:12px;
+  cursor:pointer;
+}
+
+/* --- 8節 書き出しと共有のボタン --- */
+.button-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.button-row .wide-button{ margin-top:10px; }
+
+#export-message{
+  margin:10px 0 0;
+  color:var(--sub);
+  font-size:13px;
+  line-height:1.5;
+}
+
 #home-head{
   display:flex;
   justify-content:flex-end;
@@ -920,6 +977,14 @@ body{
 
 <main>
   <div id="home-view">
+    <!-- 8節 バックアップを促す帯 -->
+    <div id="backup-notice" hidden>
+      <button type="button" id="backup-notice-share">
+        <span id="backup-notice-text"></span>
+      </button>
+      <button type="button" id="backup-notice-later">あとで</button>
+    </div>
+
     <div id="home-head">
       <button type="button" class="icon-button" id="open-settings" aria-label="設定">⚙</button>
     </div>
@@ -982,7 +1047,11 @@ body{
       <h3>書き出し</h3>
       <p class="hint">この内容をすべてコピーして保管してください。</p>
       <textarea id="export-text" rows="8" readonly></textarea>
-      <button type="button" class="wide-button" id="export-select">すべて選択</button>
+      <div class="button-row">
+        <button type="button" class="wide-button" id="export-run">書き出す</button>
+        <button type="button" class="wide-button" id="share-run">共有</button>
+      </div>
+      <p id="export-message" hidden></p>
     </section>
 
     <section class="backup-block">
@@ -1304,12 +1373,17 @@ function normalizeState(data){
   }
   return {
     version: 1,
-    habits: data.habits.map(normalizeHabit)
+    habits: data.habits.map(normalizeHabit),
+    /* 最後にバックアップを書き出した日。未書き出しは null */
+    lastExportedAt:
+      typeof data.lastExportedAt === 'string' && DATE_RE.test(data.lastExportedAt)
+        ? data.lastExportedAt
+        : null
   };
 }
 
 function emptyState(){
-  return { version: 1, habits: [] };
+  return { version: 1, habits: [], lastExportedAt: null };
 }
 
 /* =========================================================
@@ -1455,6 +1529,8 @@ function render(){
   add.setAttribute('aria-label', '習慣を追加');
   add.textContent = '＋';
   grid.appendChild(add);
+
+  updateBackupNotice();
 }
 
 /* カード1枚だけを描き直す。
@@ -2082,6 +2158,7 @@ function openSettings(){
   document.getElementById('export-text').value = JSON.stringify(state, null, 2);
   document.getElementById('import-text').value = '';
   document.getElementById('import-message').hidden = true;
+  document.getElementById('export-message').hidden = true;
   showView('settings-view');
 }
 
@@ -2127,10 +2204,145 @@ document.getElementById('open-settings').addEventListener('click', openSettings)
 document.getElementById('close-settings').addEventListener('click', closeSettings);
 document.getElementById('import-run').addEventListener('click', runImport);
 
-document.getElementById('export-select').addEventListener('click', function(){
+/* --- 8節 共有と、バックアップを促す帯 --- */
+
+const REMIND_AFTER_DAYS = 30;
+const SNOOZE_DAYS = 7;
+
+/* 「あとで」の期限は端末ごとの都合なので、バックアップ本体（habit.v1）には入れない。
+   書き出した JSON に混ざると、別の端末へ復元したときに一緒に付いてくるため。 */
+const SNOOZE_KEY = 'habit.backupSnoozeUntil';
+
+function readSnoozeUntil(){
+  try {
+    const value = localStorage.getItem(SNOOZE_KEY);
+    return value !== null && DATE_RE.test(value) ? value : null;
+  } catch (e) {
+    console.warn('localStorage を読めませんでした', e);
+    return null;
+  }
+}
+
+function writeSnoozeUntil(key){
+  try {
+    localStorage.setItem(SNOOZE_KEY, key);
+  } catch (e) {
+    console.warn('localStorage に保存できませんでした', e);
+  }
+}
+
+function backupJson(){
+  return JSON.stringify(state, null, 2);
+}
+
+function daysSinceExport(){
+  if (state.lastExportedAt === null) return null;
+  return daysBetween(parseDate(state.lastExportedAt), today());
+}
+
+function markExported(){
+  state.lastExportedAt = dateKey(today());
+  saveState();
+  updateBackupNotice();
+}
+
+function showExportMessage(text){
+  const message = document.getElementById('export-message');
+  message.textContent = text;
+  message.hidden = false;
+}
+
+function fillExportBox(){
   const text = document.getElementById('export-text');
+  text.value = backupJson();
   text.focus();
   text.select();
+}
+
+/* 共有シートを開く。開けたら true。
+   使えない環境とキャンセルは false を返し、呼び出し側で何もしない。 */
+async function shareBackup(){
+  if (typeof navigator.share !== 'function') return false;
+  try {
+    await navigator.share({ text: backupJson() });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function shareIsAvailable(){
+  return typeof navigator.share === 'function';
+}
+
+/* 帯を出すか決める。
+   30日以上経っている（または一度も書き出していない）ときだけ出す。
+   「あとで」で閉じたあと7日間は出さない。 */
+function shouldRemindBackup(){
+  if (state.habits.length === 0) return false;
+
+  const snooze = readSnoozeUntil();
+  if (snooze !== null && daysBetween(today(), parseDate(snooze)) > 0) return false;
+
+  const days = daysSinceExport();
+  return days === null || days >= REMIND_AFTER_DAYS;
+}
+
+function updateBackupNotice(){
+  const notice = document.getElementById('backup-notice');
+  const show = shouldRemindBackup();
+  notice.hidden = !show;
+  if (!show) return;
+
+  const days = daysSinceExport();
+  document.getElementById('backup-notice-text').textContent =
+    days === null
+      ? 'まだバックアップしていません'
+      : 'バックアップから' + days + '日経っています';
+}
+
+document.getElementById('export-run').addEventListener('click', function(){
+  markExported();
+  fillExportBox();
+  showExportMessage('書き出しました。この内容をコピーして保管してください。');
+});
+
+document.getElementById('share-run').addEventListener('click', async function(){
+  if (await shareBackup()) {
+    markExported();
+    showExportMessage('共有しました。');
+    return;
+  }
+
+  /* 使えない環境では何も壊さず、テキスト欄からのコピーに任せる */
+  fillExportBox();
+  showExportMessage(
+    shareIsAvailable()
+      ? '共有を取り消しました。上のテキストをコピーしても保管できます。'
+      : 'この端末では共有を使えません。上のテキストをコピーして保管してください。'
+  );
+});
+
+/* 帯を押すと共有シートが開く */
+document.getElementById('backup-notice-share').addEventListener('click', async function(){
+  if (await shareBackup()) {
+    markExported();
+    return;
+  }
+  /* 共有が使えなければ、書き出し欄を開いてコピーに任せる */
+  openSettings();
+  fillExportBox();
+  showExportMessage(
+    shareIsAvailable()
+      ? '共有を取り消しました。上のテキストをコピーしても保管できます。'
+      : 'この端末では共有を使えません。上のテキストをコピーして保管してください。'
+  );
+});
+
+/* 「あとで」で閉じたら7日間は出さない */
+document.getElementById('backup-notice-later').addEventListener('click', function(){
+  writeSnoozeUntil(dateKey(addDays(today(), SNOOZE_DAYS)));
+  updateBackupNotice();
 });
 
 /* =========================================================
