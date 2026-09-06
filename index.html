@@ -465,19 +465,50 @@ body{
 
 #detail-more{ margin-top:4px; }
 
-/* 「＋」は画面下部に固定する。
-   記録が214件ある習慣でも、末尾までスクロールせずに押せるように。 */
+/* 6節 下部のバー … リスト表示 ☰ ／「＋」／ カレンダー表示 ▦
+   「＋」を常に届く位置に置くため、バーごと画面下部に固定する。 */
 #detail-view{
-  padding-bottom:96px;
+  padding-bottom:104px;
 }
+
+#detail-bar{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:15;
+  display:flex;
+  align-items:center;
+  justify-content:space-around;
+  gap:12px;
+  padding:10px calc(env(safe-area-inset-right) + 24px)
+          calc(env(safe-area-inset-bottom) + 12px)
+          calc(env(safe-area-inset-left) + 24px);
+  background:var(--bg);
+  border-top:1px solid rgba(255,255,255,0.12);
+}
+
+.bar-mode{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  border:0;
+  border-radius:10px;
+  width:52px;
+  height:44px;
+  background:transparent;
+  color:var(--sub);
+  font-size:20px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.bar-mode.is-active{ color:var(--habit-color); }
 
 #detail-add{
   appearance:none;
   -webkit-appearance:none;
-  position:fixed;
-  right:calc(env(safe-area-inset-right) + 18px);
-  bottom:calc(env(safe-area-inset-bottom) + 18px);
-  z-index:15;
+  flex:0 0 auto;
   width:56px;
   height:56px;
   border:0;
@@ -488,7 +519,84 @@ body{
   font-size:26px;
   line-height:1;
   cursor:pointer;
-  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  box-shadow:0 4px 14px rgba(0,0,0,0.4);
+}
+
+/* --- 6節 年別カレンダー（読み取り専用） --- */
+#year-tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.year-tab{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  border-radius:999px;
+  padding:8px 16px;
+  background:var(--card);
+  color:var(--sub);
+  font-family:inherit;
+  font-size:14px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  cursor:pointer;
+}
+
+.year-tab.is-active{
+  background:var(--habit-color);
+  color:var(--habit-ink);
+}
+
+#year-total{
+  margin:0 0 18px;
+  color:var(--sub);
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+}
+
+.ycal-weekdays{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:3px;
+  max-width:266px;
+  margin-bottom:6px;
+}
+
+.ycal-weekdays span{
+  text-align:center;
+  color:var(--sub);
+  font-size:10px;
+  line-height:14px;
+}
+
+.ycal-month{ margin-bottom:18px; }
+
+.ycal-name{
+  margin-bottom:5px;
+  font-size:13px;
+  font-weight:600;
+}
+
+.ycal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:3px;
+  max-width:266px;
+}
+
+.ycal-day{
+  aspect-ratio:1 / 1;
+  border-radius:5px;
+  background:var(--dot-empty);
+}
+
+.ycal-day.is-blank{ background:transparent; }
+
+#year-empty{
+  color:var(--sub);
+  font-size:13px;
 }
 
 /* --- 6節 記録の入力（日付を選んで追加・編集） --- */
@@ -1013,11 +1121,30 @@ body{
       <span id="detail-daynumber"></span>
     </div>
 
-    <div id="detail-list"></div>
-    <p id="detail-empty" hidden>まだ記録がありません。</p>
-    <button type="button" class="wide-button" id="detail-more" hidden>もっと見る</button>
+    <!-- リスト表示 -->
+    <div id="detail-listing">
+      <div id="detail-list"></div>
+      <p id="detail-empty" hidden>まだ記録がありません。</p>
+      <button type="button" class="wide-button" id="detail-more" hidden>もっと見る</button>
+    </div>
 
-    <button type="button" id="detail-add">＋</button>
+    <!-- 6節 年別カレンダー（読み取り専用） -->
+    <div id="detail-calendar" hidden>
+      <div id="year-tabs"></div>
+      <p id="year-total"></p>
+      <div class="ycal-weekdays">
+        <span>日</span><span>月</span><span>火</span><span>水</span>
+        <span>木</span><span>金</span><span>土</span>
+      </div>
+      <div id="year-months"></div>
+      <p id="year-empty" hidden>まだ記録がありません。</p>
+    </div>
+
+    <div id="detail-bar">
+      <button type="button" class="bar-mode" id="mode-list" aria-label="リスト表示">☰</button>
+      <button type="button" id="detail-add" aria-label="記録を追加">＋</button>
+      <button type="button" class="bar-mode" id="mode-calendar" aria-label="カレンダー表示">▦</button>
+    </div>
   </section>
 
   <!-- 7節 並び替え専用の一覧 -->
@@ -1779,6 +1906,8 @@ const DETAIL_PAGE = 100;
 
 let detailHabitId = null;
 let detailLimit = DETAIL_PAGE;
+let detailMode = 'list';   /* 'list' | 'calendar' */
+let detailYear = null;
 
 /* バッジの数字が読める文字色を選ぶ（7色とも使うため） */
 function readableOn(color){
@@ -1861,6 +1990,100 @@ function buildTimelineRow(habit, key, olderKey, isLast){
   return row;
 }
 
+/* =========================================================
+   6節 年別カレンダー（読み取り専用）
+   ========================================================= */
+
+/* 記録がある年だけを新しい順で返す */
+function recordedYears(habit){
+  const years = {};
+  for (const key of Object.keys(habit.records)) {
+    years[parseDate(key).getFullYear()] = true;
+  }
+  return Object.keys(years)
+    .map(Number)
+    .sort(function(a, b){ return b - a; });
+}
+
+function countInYear(habit, year){
+  let n = 0;
+  for (const key of Object.keys(habit.records)) {
+    if (parseDate(key).getFullYear() === year) n += 1;
+  }
+  return n;
+}
+
+function buildYearMonth(habit, year, monthIndex){
+  const block = document.createElement('div');
+  block.className = 'ycal-month';
+
+  const name = document.createElement('div');
+  name.className = 'ycal-name';
+  name.textContent = (monthIndex + 1) + '月';
+  block.appendChild(name);
+
+  const grid = document.createElement('div');
+  grid.className = 'ycal-grid';
+
+  /* 日〜土の7列に合わせるため、月初の曜日ぶんだけ空ける */
+  const leading = new Date(year, monthIndex, 1).getDay();
+  for (let i = 0; i < leading; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'ycal-day is-blank';
+    grid.appendChild(blank);
+  }
+
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = dateKey(new Date(year, monthIndex, day));
+
+    const cell = document.createElement('div');
+    cell.className = 'ycal-day';
+    /* 記録がある日は習慣の色で塗る。読み取り専用なので押せない。 */
+    if (hasRecord(habit, key)) cell.style.background = habit.color;
+    grid.appendChild(cell);
+  }
+
+  block.appendChild(grid);
+  return block;
+}
+
+function renderYearCalendar(habit){
+  const years = recordedYears(habit);
+  const tabs = document.getElementById('year-tabs');
+  const months = document.getElementById('year-months');
+
+  tabs.textContent = '';
+  months.textContent = '';
+
+  const empty = years.length === 0;
+  document.getElementById('year-empty').hidden = !empty;
+  document.getElementById('year-total').hidden = empty;
+  document.querySelector('#detail-calendar .ycal-weekdays').hidden = empty;
+  if (empty) return;
+
+  /* 選んでいた年が無くなっていたら、いちばん新しい年に戻す */
+  if (detailYear === null || years.indexOf(detailYear) === -1) detailYear = years[0];
+
+  for (const year of years) {
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'year-tab';
+    tab.dataset.year = year;
+    tab.textContent = year;
+    if (year === detailYear) tab.classList.add('is-active');
+    tabs.appendChild(tab);
+  }
+
+  /* 年ごとの完了日数を1行だけ。最高継続日数や完了率は出さない。 */
+  document.getElementById('year-total').textContent =
+    '完了 ' + countInYear(habit, detailYear) + '日';
+
+  for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+    months.appendChild(buildYearMonth(habit, detailYear, monthIndex));
+  }
+}
+
 function renderDetail(){
   const habit = findHabit(detailHabitId);
   if (habit === null) {
@@ -1881,13 +2104,25 @@ function renderDetail(){
       ? currentStreak(habit, base) + '日連続達成中'
       : '今日も完了させましょう！';
 
-  const keys = recordKeysNewestFirst(habit);
-  const shown = keys.slice(0, detailLimit);
-
-  /* つなぐ縦線と「＋」の色 */
+  /* つなぐ縦線・バッジ・「＋」・年タブの色 */
   const view = document.getElementById('detail-view');
   view.style.setProperty('--habit-color', habit.color);
   view.style.setProperty('--habit-ink', readableOn(habit.color));
+
+  /* リスト表示とカレンダー表示の切り替え */
+  const calendarMode = detailMode === 'calendar';
+  document.getElementById('detail-listing').hidden = calendarMode;
+  document.getElementById('detail-calendar').hidden = !calendarMode;
+  document.getElementById('mode-list').classList.toggle('is-active', !calendarMode);
+  document.getElementById('mode-calendar').classList.toggle('is-active', calendarMode);
+
+  if (calendarMode) {
+    renderYearCalendar(habit);
+    return;
+  }
+
+  const keys = recordKeysNewestFirst(habit);
+  const shown = keys.slice(0, detailLimit);
 
   const list = document.getElementById('detail-list');
   list.textContent = '';
@@ -1902,8 +2137,16 @@ function renderDetail(){
 function openDetail(habitId){
   detailHabitId = habitId;
   detailLimit = DETAIL_PAGE;
+  detailMode = 'list';
+  detailYear = null;
   renderDetail();
   showView('detail-view');
+}
+
+function setDetailMode(mode){
+  detailMode = mode;
+  renderDetail();
+  window.scrollTo(0, 0);
 }
 
 /* =========================================================
@@ -2115,6 +2358,21 @@ document.getElementById('detail-more').addEventListener('click', function(){
 
 document.getElementById('detail-add').addEventListener('click', function(){
   openEntry(detailHabitId, dateKey(today()));
+});
+
+document.getElementById('mode-list').addEventListener('click', function(){
+  setDetailMode('list');
+});
+
+document.getElementById('mode-calendar').addEventListener('click', function(){
+  setDetailMode('calendar');
+});
+
+document.getElementById('year-tabs').addEventListener('click', function(event){
+  const tab = event.target.closest('.year-tab');
+  if (tab === null) return;
+  detailYear = Number(tab.dataset.year);
+  renderDetail();
 });
 
 document.getElementById('detail-list').addEventListener('click', function(event){
