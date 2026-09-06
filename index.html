@@ -556,40 +556,38 @@ body{
   font-variant-numeric:tabular-nums;
 }
 
-.ycal-weekdays{
+/* 12か月を3列×4段に並べる。1年を一望するための画面なので、
+   縦一列にすると1画面に1〜2か月しか入らず目的を果たせない。 */
+#year-months{
   display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:3px;
-  max-width:266px;
-  margin-bottom:6px;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px 10px;
 }
-
-.ycal-weekdays span{
-  text-align:center;
-  color:var(--sub);
-  font-size:10px;
-  line-height:14px;
-}
-
-.ycal-month{ margin-bottom:18px; }
 
 .ycal-name{
-  margin-bottom:5px;
-  font-size:13px;
+  margin-bottom:4px;
+  font-size:11px;
   font-weight:600;
 }
 
 .ycal-grid{
   display:grid;
   grid-template-columns:repeat(7,1fr);
-  gap:3px;
-  max-width:266px;
+  gap:1px;
 }
 
+/* マスは小さいが、どの日か分かるように数字を入れる */
 .ycal-day{
+  display:flex;
+  align-items:center;
+  justify-content:center;
   aspect-ratio:1 / 1;
-  border-radius:5px;
+  border-radius:3px;
   background:var(--dot-empty);
+  color:var(--sub);
+  font-size:8px;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
 }
 
 .ycal-day.is-blank{ background:transparent; }
@@ -1132,10 +1130,6 @@ body{
     <div id="detail-calendar" hidden>
       <div id="year-tabs"></div>
       <p id="year-total"></p>
-      <div class="ycal-weekdays">
-        <span>日</span><span>月</span><span>火</span><span>水</span>
-        <span>木</span><span>金</span><span>土</span>
-      </div>
       <div id="year-months"></div>
       <p id="year-empty" hidden>まだ記録がありません。</p>
     </div>
@@ -2039,8 +2033,14 @@ function buildYearMonth(habit, year, monthIndex){
 
     const cell = document.createElement('div');
     cell.className = 'ycal-day';
+    cell.textContent = day;
+
     /* 記録がある日は習慣の色で塗る。読み取り専用なので押せない。 */
-    if (hasRecord(habit, key)) cell.style.background = habit.color;
+    if (hasRecord(habit, key)) {
+      cell.style.background = habit.color;
+      cell.style.color = readableOn(habit.color);
+    }
+
     grid.appendChild(cell);
   }
 
@@ -2059,7 +2059,6 @@ function renderYearCalendar(habit){
   const empty = years.length === 0;
   document.getElementById('year-empty').hidden = !empty;
   document.getElementById('year-total').hidden = empty;
-  document.querySelector('#detail-calendar .ycal-weekdays').hidden = empty;
   if (empty) return;
 
   /* 選んでいた年が無くなっていたら、いちばん新しい年に戻す */
