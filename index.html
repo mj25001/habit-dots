@@ -1439,12 +1439,17 @@ function currentStreak(habit, ref){
   return streakEndingOn(habit, addDays(base, -1));
 }
 
-/* 数え終わりの日。稼働中は今日、達成済みは completedDate。
+/* 達成日 … 保存しない。達成済みの習慣の、記録のある最終日から毎回計算する。
+   保存された値と実データがずれる余地をなくすため。 */
+function completionDate(habit){
+  return habit.archived ? lastRecordedDate(habit) : null;
+}
+
+/* 数え終わりの日。稼働中は今日、達成済みは達成日。
    終わった習慣の日数が伸び続けないようにする。 */
 function referenceDate(habit){
-  return habit.archived && habit.completedDate !== null
-    ? parseDate(habit.completedDate)
-    : today();
+  const done = completionDate(habit);
+  return done === null ? today() : parseDate(done);
 }
 
 /* 総日数 … 開始日から数え終わりの日まで（開始日が1日目） */
@@ -1508,11 +1513,12 @@ function normalizeRecords(records){
   return out;
 }
 
+/* 古いバックアップには completedDate が入っているが、読み飛ばす。
+   達成日は records から計算するため、保存された値は使わない。 */
 function normalizeHabit(raw, index){
   const source = raw && typeof raw === 'object' ? raw : {};
-  const archived = source.archived === true;
 
-  const habit = {
+  return {
     id: typeof source.id === 'string' && source.id ? source.id : 'h' + (index + 1),
     name: typeof source.name === 'string' ? source.name : '',
     color: typeof source.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(source.color)
@@ -1522,20 +1528,9 @@ function normalizeHabit(raw, index){
       ? source.startDate
       : dateKey(today()),
     order: typeof source.order === 'number' && isFinite(source.order) ? source.order : index,
-    archived: archived,
-    completedDate: null,
+    archived: source.archived === true,
     records: normalizeRecords(source.records)
   };
-
-  /* 達成日 … 達成済みにした時点で、記録のある最終日 */
-  if (archived) {
-    habit.completedDate =
-      typeof source.completedDate === 'string' && DATE_RE.test(source.completedDate)
-        ? source.completedDate
-        : lastRecordedDate(habit);
-  }
-
-  return habit;
 }
 
 function normalizeState(data){
@@ -2130,7 +2125,7 @@ function renderDetail(){
   const todayKey = dateKey(base);
 
   document.getElementById('detail-name').textContent = habit.name;
-  /* 達成済みの習慣は completedDate で止める。達成率の分母と揃う。 */
+  /* 達成済みの習慣は達成日で止める。達成率の分母と揃う。 */
   document.getElementById('detail-daynumber').textContent =
     dayNumber(habit, referenceDate(habit)) + '日目';
 
@@ -2143,9 +2138,8 @@ function renderDetail(){
      記録済みなら「◯日連続達成中」 */
   let status;
   if (habit.archived) {
-    status = habit.completedDate === null
-      ? '達成済み'
-      : formatDateJaPlain(habit.completedDate) + 'に達成';
+    const done = completionDate(habit);
+    status = done === null ? '達成済み' : formatDateJaPlain(done) + 'に達成';
   } else if (hasRecord(habit, todayKey)) {
     status = currentStreak(habit, base) + '日連続達成中';
   } else {
@@ -2278,10 +2272,17 @@ function renderMonthGrid(ids, month, selectedKey, paintHabit, maxKey){
 
 const ENTRY_CAL = { title: 'cal-title', grid: 'cal-grid', next: 'cal-next' };
 
+/* 記録できる最後の日。稼働中は今日、達成済みは達成日。
+   終わった習慣に続きを足せないようにする（再開は「稼働中に戻す」から）。 */
+function entryCeiling(){
+  const habit = findHabit(entryHabitId);
+  return habit === null ? today() : referenceDate(habit);
+}
+
 function renderCalendar(){
   const habit = findHabit(entryHabitId);
   if (habit === null || calMonth === null) return;
-  renderMonthGrid(ENTRY_CAL, calMonth, entryDate, habit);
+  renderMonthGrid(ENTRY_CAL, calMonth, entryDate, habit, dateKey(entryCeiling()));
 }
 
 function openCalendar(){
@@ -2307,11 +2308,10 @@ function syncEntry(){
   const habit = findHabit(entryHabitId);
   if (habit === null) return;
 
-  const todayKey = dateKey(today());
   const exists = hasRecord(habit, entryDate);
 
   document.getElementById('entry-date-label').textContent = formatDateJa(entryDate);
-  document.getElementById('entry-next').disabled = (entryDate === todayKey);
+  document.getElementById('entry-next').disabled = (entryDate === dateKey(entryCeiling()));
 
   /* すでに記録がある日は、その日のメモを読み込んでボタンを「保存」に変える */
   const memo = document.getElementById('entry-memo');
@@ -2360,7 +2360,7 @@ function cancelEntry(){
 /* 矢印で1日ずつ前後に動かす */
 function shiftEntryDate(days){
   const next = addDays(parseDate(entryDate), days);
-  if (daysBetween(today(), next) > 0) return;   /* 未来には進めない */
+  if (daysBetween(entryCeiling(), next) > 0) return;   /* 上限より先へは進めない */
   entryDate = dateKey(next);
   syncEntry();
 }
@@ -2406,7 +2406,10 @@ document.getElementById('detail-more').addEventListener('click', function(){
 });
 
 document.getElementById('detail-add').addEventListener('click', function(){
-  openEntry(detailHabitId, dateKey(today()));
+  const habit = findHabit(detailHabitId);
+  if (habit === null) return;
+  /* 稼働中は今日から。達成済みは達成日から（それより後には記録できない） */
+  openEntry(detailHabitId, dateKey(referenceDate(habit)));
 });
 
 document.getElementById('mode-list').addEventListener('click', function(){
@@ -2886,7 +2889,6 @@ function saveHabitSheet(){
       startDate: habitStartDate,
       order: nextOrder(),
       archived: false,
-      completedDate: null,
       records: {}
     });
   } else {
@@ -2975,7 +2977,7 @@ function openReorder(){
   showView('reorder-view');
 }
 
-/* 達成済みにする … ホームから外し、completedDate に最終記録日を入れる。
+/* 達成済みにする … ホームから外す。達成日は records から計算するので保存しない。
    記録は消さない。稼働中に戻せる。 */
 function toggleArchive(){
   const habit = findHabit(habitSheetId);
@@ -2983,15 +2985,19 @@ function toggleArchive(){
 
   if (habit.archived) {
     habit.archived = false;
-    habit.completedDate = null;
     habit.order = nextOrder();
     closeHabitSheet();
     refreshAfterHabitChange();
     return;
   }
 
+  /* 記録が0件だと達成日が決まらない */
+  if (totalDays(habit) === 0) {
+    showHabitError('記録が1件もありません');
+    return;
+  }
+
   habit.archived = true;
-  habit.completedDate = lastRecordedDate(habit);
   closeHabitSheet();
   refreshAfterHabitChange();
 
@@ -3044,8 +3050,9 @@ function renderArchived(){
 
     const meta = document.createElement('div');
     meta.className = 'arch-meta';
+    const done = completionDate(habit);
     meta.textContent = totalDays(habit) + '日'
-      + (habit.completedDate === null ? '' : '・' + habit.completedDate.replace(/-/g, '/') + ' まで');
+      + (done === null ? '' : '・' + done.replace(/-/g, '/') + ' まで');
     body.appendChild(meta);
 
     row.appendChild(body);
