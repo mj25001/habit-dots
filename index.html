@@ -353,7 +353,16 @@ body{
   align-items:baseline;
   justify-content:space-between;
   gap:12px;
-  margin-bottom:22px;
+  margin-bottom:4px;
+}
+
+/* 開始日からの達成率。通算日数のすぐ下に置く */
+#detail-rate{
+  margin:0 0 20px;
+  text-align:right;
+  color:var(--sub);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
 }
 
 #detail-status{
@@ -1118,6 +1127,7 @@ body{
       <span id="detail-status"></span>
       <span id="detail-daynumber"></span>
     </div>
+    <p id="detail-rate"></p>
 
     <!-- リスト表示 -->
     <div id="detail-listing">
@@ -1421,6 +1431,22 @@ function currentStreak(habit, ref){
   const base = ref || today();
   if (hasRecord(habit, dateKey(base))) return streakEndingOn(habit, base);
   return streakEndingOn(habit, addDays(base, -1));
+}
+
+/* 総日数 … 開始日から今日まで（開始日が1日目）。
+   達成済みの習慣は completedDate まで（達成後の日を分母に入れない）。 */
+function totalSpanDays(habit){
+  const end = habit.archived && habit.completedDate !== null
+    ? parseDate(habit.completedDate)
+    : today();
+  return daysBetween(parseDate(habit.startDate), end) + 1;
+}
+
+/* 達成率 … 累計完了日数 ÷ 総日数。小数点以下は切り捨て */
+function achievementRate(habit){
+  const span = totalSpanDays(habit);
+  if (span <= 0) return 0;
+  return Math.floor(totalDays(habit) / span * 100);
 }
 
 /* 記録のある最初の日。開始日の下限に使う */
@@ -2095,6 +2121,10 @@ function renderDetail(){
 
   document.getElementById('detail-name').textContent = habit.name;
   document.getElementById('detail-daynumber').textContent = dayNumber(habit, base) + '日目';
+
+  /* リスト表示でもカレンダー表示でも同じ位置に出す */
+  document.getElementById('detail-rate').textContent =
+    totalDays(habit) + ' / ' + totalSpanDays(habit) + '日　' + achievementRate(habit) + '%';
 
   /* 今日まだ記録が無ければ「今日も完了させましょう！」、
      記録済みなら「◯日連続達成中」 */
