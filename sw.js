@@ -3,7 +3,7 @@
    index.html を変更したら、この CACHE 名を必ず上げること（habit-v1 → habit-v2）。
    上げないと、端末に残った古い版が表示され続ける。 */
 
-const CACHE = 'habit-v8';
+const CACHE = 'habit-v9';
 
 const ASSETS = [
   './index.html',

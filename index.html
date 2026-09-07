@@ -1382,11 +1382,16 @@ function addDays(date, n){
 
 const WEEKDAYS = ['日','月','火','水','木','金','土'];
 
+/* 例: 2026年9月4日 */
+function formatDateJaPlain(key){
+  const d = parseDate(key);
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+
 /* 例: 2026年9月4日（金） */
 function formatDateJa(key){
   const d = parseDate(key);
-  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'
-    + '（' + WEEKDAYS[d.getDay()] + '）';
+  return formatDateJaPlain(key) + '（' + WEEKDAYS[d.getDay()] + '）';
 }
 
 /* b - a を日数で返す */
@@ -2133,12 +2138,20 @@ function renderDetail(){
   document.getElementById('detail-rate').textContent =
     totalDays(habit) + ' / ' + totalSpanDays(habit) + '日　' + achievementRate(habit) + '%';
 
-  /* 今日まだ記録が無ければ「今日も完了させましょう！」、
+  /* 達成済みは達成日を出す。稼働中前提の文言を出さない。
+     稼働中は、今日まだ記録が無ければ「今日も完了させましょう！」、
      記録済みなら「◯日連続達成中」 */
-  document.getElementById('detail-status').textContent =
-    hasRecord(habit, todayKey)
-      ? currentStreak(habit, base) + '日連続達成中'
-      : '今日も完了させましょう！';
+  let status;
+  if (habit.archived) {
+    status = habit.completedDate === null
+      ? '達成済み'
+      : formatDateJaPlain(habit.completedDate) + 'に達成';
+  } else if (hasRecord(habit, todayKey)) {
+    status = currentStreak(habit, base) + '日連続達成中';
+  } else {
+    status = '今日も完了させましょう！';
+  }
+  document.getElementById('detail-status').textContent = status;
 
   /* つなぐ縦線・バッジ・「＋」・年タブの色 */
   const view = document.getElementById('detail-view');
