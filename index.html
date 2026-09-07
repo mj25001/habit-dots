@@ -1409,7 +1409,8 @@ function totalDays(habit){
   return Object.keys(habit.records).length;
 }
 
-/* 通算日数（◯日目） … (今日 - startDate).days + 1。開始日が1日目 */
+/* 通算日数（◯日目） … (ref - startDate).days + 1。開始日が1日目。
+   ref を省略すると今日。記録1件ごとの日数はその日を渡して求める。 */
 function dayNumber(habit, ref){
   return daysBetween(parseDate(habit.startDate), ref || today()) + 1;
 }
@@ -1433,13 +1434,17 @@ function currentStreak(habit, ref){
   return streakEndingOn(habit, addDays(base, -1));
 }
 
-/* 総日数 … 開始日から今日まで（開始日が1日目）。
-   達成済みの習慣は completedDate まで（達成後の日を分母に入れない）。 */
-function totalSpanDays(habit){
-  const end = habit.archived && habit.completedDate !== null
+/* 数え終わりの日。稼働中は今日、達成済みは completedDate。
+   終わった習慣の日数が伸び続けないようにする。 */
+function referenceDate(habit){
+  return habit.archived && habit.completedDate !== null
     ? parseDate(habit.completedDate)
     : today();
-  return daysBetween(parseDate(habit.startDate), end) + 1;
+}
+
+/* 総日数 … 開始日から数え終わりの日まで（開始日が1日目） */
+function totalSpanDays(habit){
+  return daysBetween(parseDate(habit.startDate), referenceDate(habit)) + 1;
 }
 
 /* 達成率 … 累計完了日数 ÷ 総日数。小数点以下は切り捨て */
@@ -2120,7 +2125,9 @@ function renderDetail(){
   const todayKey = dateKey(base);
 
   document.getElementById('detail-name').textContent = habit.name;
-  document.getElementById('detail-daynumber').textContent = dayNumber(habit, base) + '日目';
+  /* 達成済みの習慣は completedDate で止める。達成率の分母と揃う。 */
+  document.getElementById('detail-daynumber').textContent =
+    dayNumber(habit, referenceDate(habit)) + '日目';
 
   /* リスト表示でもカレンダー表示でも同じ位置に出す */
   document.getElementById('detail-rate').textContent =
